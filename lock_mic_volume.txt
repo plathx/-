@@ -1,118 +1,114 @@
-# ================================================
-# PowerShell Script: Mic Volume Lock Installer/Uninstaller
-# Runs as Administrator automatically
-# All messages and prompts are in English as requested
-# ================================================
+# PowerShell Script: Lock Mic Volume Installer/Uninstaller
+# This script MUST be saved as a .ps1 file (e.g. LockMicVolume.ps1) before running.
+# It will automatically request Administrator rights if not already running as admin.
 
-# Self-elevate to Administrator if not already running as admin
+# Self-elevation to Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process PowerShell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Start-Process powershell.exe -Verb RunAs -ArgumentList $arguments
     exit
 }
 
-# Step 1: Create the folder
-$mainFolder = "C:\phwyverysad"
-New-Item -Path $mainFolder -ItemType Directory -Force | Out-Null
-Write-Host "Folder created: $mainFolder" -ForegroundColor Green
+# Step 1: Create folder C:\phwyverysad
+Write-Host "Creating folder C:\phwyverysad..." -ForegroundColor Green
+New-Item -Path "C:\phwyverysad" -ItemType Directory -Force | Out-Null
 
-# Step 2: Main menu
-Write-Host "`n=== MAIN MENU ===" -ForegroundColor Yellow
+# Main menu
+Write-Host "`n=== Lock Mic Volume Tool ===" -ForegroundColor Cyan
 Write-Host "1. Install"
 Write-Host "2. Uninstall"
 $mainChoice = Read-Host "Enter your choice (1 or 2)"
 
-if ($mainChoice -eq "1") {
-    # ==================== INSTALL SECTION ====================
-    Write-Host "`nStarting installation..." -ForegroundColor Cyan
-
-    # Download the zip
-    $zipPath = "$mainFolder\lock_mic_volume.zip"
-    Write-Host "Downloading from https://is.gd/NZJRo6 ..." 
-    Invoke-WebRequest -Uri "https://is.gd/NZJRo6" -OutFile $zipPath -UseBasicParsing
-    Write-Host "Download completed." -ForegroundColor Green
-
-    # Unzip
-    Write-Host "Unzipping lock_mic_volume.zip ..."
-    Expand-Archive -Path $zipPath -DestinationPath $mainFolder -Force
-    Write-Host "Unzipped successfully." -ForegroundColor Green
-
-    # Move inner folders (100%, 75%, 50%, 25%) out of the "lock_mic_volume" folder to C:\phwyverysad
-    $innerFolder = "$mainFolder\lock_mic_volume"
-    if (Test-Path $innerFolder) {
-        Move-Item "$innerFolder\*" $mainFolder -Force
-        Remove-Item $innerFolder -Recurse -Force
-    }
-    Remove-Item $zipPath -Force
-    Write-Host "Files extracted and cleaned. Ready for percentage selection." -ForegroundColor Green
-
-    # Percentage selection menu
-    Write-Host "`n=== SELECT VOLUME LOCK PERCENTAGE ===" -ForegroundColor Yellow
-    Write-Host "1. 100%"
-    Write-Host "2. 75%"
-    Write-Host "3. 50%"
-    Write-Host "4. 25%"
-    $percChoice = Read-Host "Enter your choice (1-4)"
-
-    $selectedPercent = switch ($percChoice) {
-        "1" { "100%" }
-        "2" { "75%" }
-        "3" { "50%" }
-        "4" { "25%" }
-        default { Write-Host "Invalid choice. Exiting." -ForegroundColor Red; exit }
-    }
-
-    $targetFolder = "$mainFolder\$selectedPercent"
-    if (Test-Path $targetFolder) {
-        Write-Host "`nSelected: $selectedPercent" -ForegroundColor Green
-        Set-Location -Path $targetFolder
-        Write-Host "Running Run_atomatically.bat ..." -ForegroundColor Cyan
-        Start-Process -FilePath ".\Run_atomatically.bat" -Wait -NoNewWindow
-        Write-Host "Run_atomatically.bat finished." -ForegroundColor Green
-    } else {
-        Write-Host "Folder $selectedPercent not found. Exiting." -ForegroundColor Red
-        exit
-    }
-
-    # Clean up the main folder after installation
-    Set-Location -Path "C:\"
-    Remove-Item $mainFolder -Recurse -Force
-    Write-Host "`nInstallation complete! Folder C:\phwyverysad has been deleted." -ForegroundColor Green
-
-} elseif ($mainChoice -eq "2") {
-    # ==================== UNINSTALL SECTION ====================
-    Write-Host "`nStarting uninstallation..." -ForegroundColor Cyan
-
-    # Kill nircmdc.exe
-    Write-Host "Killing nircmdc.exe process..."
-    taskkill /IM nircmdc.exe /F | Out-Null
-    Write-Host "Process killed (if it was running)." -ForegroundColor Green
-
-    # Force delete files in C:\Windows
-    $files = @(
-        "C:\Windows\lock_mic_vol.bat",
-        "C:\Windows\hide_cmd_window2.vbs",
-        "C:\Windows\nircmdc.exe"
-    )
-    foreach ($file in $files) {
-        if (Test-Path $file) {
-            Remove-Item $file -Force -ErrorAction SilentlyContinue
-            Write-Host "Deleted: $file" -ForegroundColor Green
+switch ($mainChoice) {
+    "1" {
+        # INSTALL PATH
+        $zipPath = "C:\phwyverysad\lock_mic_volume.zip"
+        
+        Write-Host "`nDownloading from https://is.gd/NZJRo6 ..." -ForegroundColor Green
+        Invoke-WebRequest -Uri "https://is.gd/NZJRo6" -OutFile $zipPath -UseBasicParsing
+        
+        Set-Location "C:\phwyverysad"
+        Write-Host "Extracting lock_mic_volume.zip ..." -ForegroundColor Green
+        Expand-Archive -Path $zipPath -DestinationPath "." -Force
+        
+        # Move inner folders (100%, 75%, etc.) out from lock_mic_volume folder
+        $innerFolder = "C:\phwyverysad\lock_mic_volume"
+        if (Test-Path $innerFolder) {
+            Write-Host "Moving percentage folders to C:\phwyverysad ..." -ForegroundColor Green
+            Get-ChildItem -Path $innerFolder -Directory | Move-Item -Destination "C:\phwyverysad" -Force
+            Remove-Item -Path $innerFolder -Recurse -Force
         }
+        
+        Remove-Item -Path $zipPath -Force
+        Write-Host "Download and extraction completed." -ForegroundColor Green
+        
+        # Percentage selection
+        Write-Host "`nSelect lock volume percentage:" -ForegroundColor Cyan
+        Write-Host "1. 100%"
+        Write-Host "2. 75%"
+        Write-Host "3. 50%"
+        Write-Host "4. 25%"
+        $percentChoice = Read-Host "Enter your choice (1-4)"
+        
+        $folderName = switch ($percentChoice) {
+            "1" { "100%" }
+            "2" { "75%" }
+            "3" { "50%" }
+            "4" { "25%" }
+            default { Write-Host "Invalid choice! Exiting." -ForegroundColor Red; exit }
+        }
+        
+        $targetFolder = "C:\phwyverysad\$folderName"
+        if (-not (Test-Path $targetFolder)) {
+            Write-Host "Folder '$folderName' not found! Exiting." -ForegroundColor Red
+            exit
+        }
+        
+        Set-Location $targetFolder
+        Write-Host "`nRunning Run_atomatically.bat ..." -ForegroundColor Green
+        $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru -NoNewWindow
+        
+        Write-Host "Waiting 3 seconds..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+        
+        Write-Host "Force closing Run_atomatically.bat ..." -ForegroundColor Yellow
+        Stop-Process -InputObject $process -Force -ErrorAction SilentlyContinue
+        
+        # Clean up
+        Write-Host "Deleting C:\phwyverysad ..." -ForegroundColor Green
+        Set-Location "C:\"
+        Remove-Item -Path "C:\phwyverysad" -Recurse -Force
+        
+        Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
     }
-
-    # Delete startup file
-    $startupFolder = [Environment]::GetFolderPath("Startup")
-    $startupFile = "$startupFolder\start_lock_mic_vol.bat"
-    if (Test-Path $startupFile) {
-        Remove-Item $startupFile -Force -ErrorAction SilentlyContinue
-        Write-Host "Deleted startup file: $startupFile" -ForegroundColor Green
+    
+    "2" {
+        # UNINSTALL PATH
+        Write-Host "`nKilling nircmdc.exe ..." -ForegroundColor Yellow
+        taskkill /IM nircmdc.exe /F 2>$null
+        
+        $filesToDelete = @(
+            "C:\Windows\lock_mic_vol.bat",
+            "C:\Windows\hide_cmd_window2.vbs",
+            "C:\Windows\nircmdc.exe",
+            "$([Environment]::GetFolderPath('Startup'))\start_lock_mic_vol.bat"
+        )
+        
+        foreach ($file in $filesToDelete) {
+            if (Test-Path $file) {
+                Write-Host "Force deleting: $file" -ForegroundColor Green
+                Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        Write-Host "`nUninstallation completed successfully!" -ForegroundColor Green
     }
-
-    Write-Host "`nUninstallation complete! All lock_mic_volume files have been removed." -ForegroundColor Green
-
-} else {
-    Write-Host "Invalid choice. Exiting script." -ForegroundColor Red
+    
+    default {
+        Write-Host "Invalid choice! Exiting." -ForegroundColor Red
+    }
 }
 
-Write-Host "`nPress any key to exit..."
+Write-Host "`nPress any key to exit..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
