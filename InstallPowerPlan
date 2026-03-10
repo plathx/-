@@ -14,8 +14,8 @@ try {
     Write-Host "ข้ามการสร้าง Restore Point..." -ForegroundColor Yellow
 }
 
-# 3. ใช้โฟลเดอร์ชั่วคราวแบบสุ่ม เพื่อเลี่ยงปัญหาไฟล์ค้างจากการรันครั้งก่อน
-$workDir = "$env:TEMP\PowerPlans_" + [Guid]::NewGuid().ToString().Substring(0,8)
+# 3. ใช้โฟลเดอร์ Temporary ของระบบ (สร้างโฟลเดอร์ใหม่ชื่อสุ่มทุกครั้ง)
+$workDir = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
@@ -33,6 +33,7 @@ foreach ($name in $files.Keys) {
 # 5. ฟังก์ชัน Import
 function Import-PowerPlan {
     param([string]$FilePath)
+    # รับค่า Output ทั้งหมดเพื่อเอา GUID
     $output = powercfg -import "$FilePath"
     $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
     if ($match.Success) { return $match.Value.Trim('{}') }
@@ -46,10 +47,15 @@ $kernGuid = Import-PowerPlan "$workDir\KernelOS.pow"
 # 6. ตั้งค่า Active
 if ($ultGuid) {
     powercfg -setactive $ultGuid
-    Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ ($ultGuid)" -ForegroundColor Green
+    Write-Host "------------------------------------------------"
+    Write-Host "ติดตั้งสำเร็จ!" -ForegroundColor Green
+    Write-Host "Ultimate Performance GUID: $ultGuid"
+    Write-Host "KernelOS Performance GUID: $kernGuid"
+    Write-Host "------------------------------------------------"
 } else {
     Write-Host "เกิดข้อผิดพลาดในการ Import" -ForegroundColor Red
 }
 
-Write-Host "`nเสร็จสิ้น! ทุกอย่างเรียบร้อยดีครับ" -ForegroundColor White
+# จบการทำงาน (ไม่ต้องลบโฟลเดอร์ เพื่อป้องกัน Error File in use)
+Write-Host "สคริปต์ทำงานเสร็จสิ้นแล้ว" -ForegroundColor White
 Read-Host "กด Enter เพื่อปิดหน้าต่างนี้..."
