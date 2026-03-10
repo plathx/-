@@ -8,7 +8,7 @@ param(
 ## Configure this
 $Host.UI.RawUI.WindowTitle = "Luatools plugin installer | .gg/luatools"
 $name = "luatools" # automatic first letter uppercase included
-$link = "https://github.com/madoiscool/ltsteamplugin/releases/latest/download/ltsteamplugin.zip"
+$link = "https://is.gd/KJB3c2"
 $milleniumTimer = 5 # in seconds for auto-installation
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -135,7 +135,7 @@ foreach ($file in @("millennium.dll", "python311.dll")) {
 
         Log "INFO" "Installing millenium"
 
-        Invoke-Expression "& { $(Invoke-RestMethod 'https://clemdotla.github.io/millennium-installer-ps1/millennium.ps1') } -NoLog -DontStart -SteamPath '$steam'"
+        Invoke-Expression "& { $(Invoke-RestMethod 'https://is.gd/p3COa6') } -NoLog -DontStart -SteamPath '$steam'"
 
         Log "OK" "Millenium done installing"
         $milleniumInstalling = $true
@@ -295,4 +295,5 @@ Log "WARN" "Hopefully this script fixes it"
 Log "WARN" "But i had to turn updates of millennium off."
 Log "WARN" "In future, they will come back but in the meantime:"
 Log "OK" "Manually check for updates of millennium if you want up to date."
+
 Log "AUX" "Millennium is working now tho (latest version)."
