@@ -8,7 +8,7 @@ param(
 ## Configure this
 $Host.UI.RawUI.WindowTitle = "Luatools plugin installer | .gg/luatools"
 $name = "luatools" # automatic first letter uppercase included
-$link = "https://is.gd/KJB3c2"
+$link = "https://github.com/madoiscool/ltsteamplugin/releases/latest/download/ltsteamplugin.zip"
 $milleniumTimer = 5 # in seconds for auto-installation
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -51,59 +51,61 @@ Write-Host
 # To hide IEX blue box thing
 $ProgressPreference = 'SilentlyContinue'
 
+
+
 Get-Process steam -ErrorAction SilentlyContinue | Stop-Process -Force
 
 
 #### Requirements part ####
 
 # Steamtools check
-$path = Join-Path $steam "xinput1_4.dll"
+# TODO: Make this prettier?
+$path = Join-Path $steam "dwmapi.dll"
 if ( Test-Path $path ) {
     Log "INFO" "Steamtools already installed"
 }
 else {
-    Log "ERR" "Steamtools not found."
-    Log "AUX" "Install it at your own risk! Close this script if you don't want to."
-    Log "WARN" "Pressing any key will download and install steamtools (UI-less)."
+    # Filtering the installation script
+    $script = Invoke-RestMethod "https://steam.run"
+    $keptLines = @()
+
+    foreach ($line in $script -split "`n") {
+        $conditions = @( # Removes lines containing one of those
+            ($line -imatch "Start-Process" -and $line -imatch "steam"),
+            ($line -imatch "steam\.exe"),
+            ($line -imatch "Start-Sleep" -or $line -imatch "Write-Host"),
+            ($line -imatch "cls" -or $line -imatch "exit"),
+            ($line -imatch "Stop-Process" -and -not ($line -imatch "Get-Process"))
+        )
         
-    # ล้างปุ่มที่อาจจะกดค้างไว้ก่อนหน้านี้
-    while ([Console]::KeyAvailable) { $null = [Console]::ReadKey($true) }
-    
-    # Wait for any key press
-    [void][System.Console]::ReadKey($true)
-    Write-Host
-    
-    Log "WARN" "Downloading Steamtools..."
-    
-    $installerPath = "C:\st-setup-1.8.30.exe"
-    $downloadUrl = "https://is.gd/uZW65O"
-    
-    try {
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
-        
-        if (Test-Path $installerPath) {
-            Log "WARN" "Installing Steamtools silently..."
-            # ใช้ /S สำหรับ Silent Install
-            Start-Process -FilePath $installerPath -ArgumentList "/S" -WindowStyle Hidden -Wait
-            
-            # รอ 5 วินาที เผื่อให้ตัวติดตั้งคัดลอกไฟล์เบื้องหลังจนเสร็จ
-            Log "AUX" "Waiting for installation to finalize..."
-            Start-Sleep -Seconds 5
-            
-            if ( Test-Path $path ) {
-                Log "OK" "Steamtools installed successfully"
-            } else {
-                Log "ERR" "Steamtools installation finished, but xinput1_4.dll was not found."
-            }
-            
-            # ลบไฟล์ติดตั้งออกหลังจากลงเสร็จ
-            Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
-        } else {
-            Log "ERR" "Failed to locate the downloaded installer at $installerPath."
+        if (-not($conditions -contains $true)) {
+            $keptLines += $line
         }
-    } catch {
-        Log "ERR" "Error downloading or installing Steamtools: $($_.Exception.Message)"
-        Log "AUX" "Make sure you run this script as Administrator to write to C:\"
+    }
+
+    $SteamtoolsScript = $keptLines -join "`n"
+    Log "ERR" "Steamtools not found."
+    
+    # Retrying with a max of 5
+    for ($i = 0; $i -lt 5; $i++) {
+
+        Log "AUX" "Install it at your own risk! Close this script if you don't want to."
+        Log "WARN" "Pressing any key will install steamtools (UI-less)."
+        
+        [void][System.Console]::ReadKey($true)
+        Write-Host
+        Log "WARN" "Installing Steamtools"
+        
+        Invoke-Expression $SteamtoolsScript *> $null
+
+        if ( Test-Path $path ) {
+            Log "OK" "Steamtools installed"
+            break
+        }
+        else {
+            Log "ERR" "Steamtools installation failed, retrying..."
+        }
+
     }
 }
 
@@ -111,11 +113,6 @@ else {
 $milleniumInstalling = $false
 foreach ($file in @("millennium.dll", "python311.dll")) {
     if (!( Test-Path (Join-Path $steam $file) )) {
-        
-        # --- ล้าง Input buffer ป้องกันการกดค้างจากขั้นตอนที่แล้ว ---
-        while ([Console]::KeyAvailable) {
-            $null = [Console]::ReadKey($true)
-        }
         
         # Ask confirmation to download
         Log "ERR" "Millenium not found, installation process will start in 5 seconds."
@@ -126,10 +123,6 @@ foreach ($file in @("millennium.dll", "python311.dll")) {
             if ([Console]::KeyAvailable) {
                 Write-Host
                 Log "ERR" "Installation cancelled by user."
-                
-                # หยุดสคริปต์ให้เห็นข้อความก่อนปิด 
-                Log "AUX" "Press any key to exit..."
-                [void][System.Console]::ReadKey($true)
                 exit
             }
 
@@ -142,7 +135,7 @@ foreach ($file in @("millennium.dll", "python311.dll")) {
 
         Log "INFO" "Installing millenium"
 
-        Invoke-Expression "& { $(Invoke-RestMethod 'https://is.gd/p3COa6') } -NoLog -DontStart -SteamPath '$steam'"
+        Invoke-Expression "& { $(Invoke-RestMethod 'https://clemdotla.github.io/millennium-installer-ps1/millennium.ps1') } -NoLog -DontStart -SteamPath '$steam'"
 
         Log "OK" "Millenium done installing"
         $milleniumInstalling = $true
@@ -302,5 +295,4 @@ Log "WARN" "Hopefully this script fixes it"
 Log "WARN" "But i had to turn updates of millennium off."
 Log "WARN" "In future, they will come back but in the meantime:"
 Log "OK" "Manually check for updates of millennium if you want up to date."
-
 Log "AUX" "Millennium is working now tho (latest version)."
