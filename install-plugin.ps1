@@ -51,61 +51,52 @@ Write-Host
 # To hide IEX blue box thing
 $ProgressPreference = 'SilentlyContinue'
 
-
-
 Get-Process steam -ErrorAction SilentlyContinue | Stop-Process -Force
 
 
 #### Requirements part ####
 
 # Steamtools check
-# TODO: Make this prettier?
 $path = Join-Path $steam "xinput1_4.dll"
 if ( Test-Path $path ) {
     Log "INFO" "Steamtools already installed"
 }
 else {
-    # Filtering the installation script
-    $script = Invoke-RestMethod "https://steam.run"
-    $keptLines = @()
-
-    foreach ($line in $script -split "`n") {
-        $conditions = @( # Removes lines containing one of those
-            ($line -imatch "Start-Process" -and $line -imatch "steam"),
-            ($line -imatch "steam\.exe"),
-            ($line -imatch "Start-Sleep" -or $line -imatch "Write-Host"),
-            ($line -imatch "cls" -or $line -imatch "exit"),
-            ($line -imatch "Stop-Process" -and -not ($line -imatch "Get-Process"))
-        )
-        
-        if (-not($conditions -contains $true)) {
-            $keptLines += $line
-        }
-    }
-
-    $SteamtoolsScript = $keptLines -join "`n"
     Log "ERR" "Steamtools not found."
+    Log "AUX" "Install it at your own risk! Close this script if you don't want to."
+    Log "WARN" "Pressing any key will download and install steamtools (UI-less)."
+        
+    # Wait for any key press
+    [void][System.Console]::ReadKey($true)
+    Write-Host
     
-    # Retrying with a max of 5
-    for ($i = 0; $i -lt 5; $i++) {
-
-        Log "AUX" "Install it at your own risk! Close this script if you don't want to."
-        Log "WARN" "Pressing any key will install steamtools (UI-less)."
+    Log "WARN" "Downloading Steamtools..."
+    
+    $installerPath = "C:\st-setup-1.8.30.exe"
+    $downloadUrl = "https://is.gd/uZW65O"
+    
+    try {
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
         
-        [void][System.Console]::ReadKey($true)
-        Write-Host
-        Log "WARN" "Installing Steamtools"
-        
-        Invoke-Expression $SteamtoolsScript *> $null
-
-        if ( Test-Path $path ) {
-            Log "OK" "Steamtools installed"
-            break
+        if (Test-Path $installerPath) {
+            Log "WARN" "Installing Steamtools silently..."
+            # ใช้ /S สำหรับ Silent Install และซ่อนหน้าต่าง
+            Start-Process -FilePath $installerPath -ArgumentList "/S" -WindowStyle Hidden -Wait
+            
+            if ( Test-Path $path ) {
+                Log "OK" "Steamtools installed successfully"
+            } else {
+                Log "ERR" "Steamtools installation finished, but xinput1_4.dll was not found."
+            }
+            
+            # ลบไฟล์ติดตั้งออกหลังจากลงเสร็จ (คอมเมนต์ไว้ถ้าต้องการเก็บไฟล์ไว้)
+            Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
+        } else {
+            Log "ERR" "Failed to locate the downloaded installer at $installerPath."
         }
-        else {
-            Log "ERR" "Steamtools installation failed, retrying..."
-        }
-
+    } catch {
+        Log "ERR" "Error downloading or installing Steamtools: $($_.Exception.Message)"
+        Log "AUX" "Make sure you run this script as Administrator to write to C:\"
     }
 }
 
