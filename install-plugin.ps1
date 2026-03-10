@@ -295,5 +295,5 @@ Log "WARN" "But i had to turn updates of millennium off."
 Log "WARN" "In future, they will come back but in the meantime:"
 Log "OK" "Manually check for updates of millennium if you want up to date."
 Log "AUX" "Millennium is working now tho (latest version)."
-Write-Host "Enter an ID Plugin : c36d5f67c99f" -ForegroundColor Green
+Log "OK" "Enter an ID Plugin : c36d5f67c99f"
 
