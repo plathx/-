@@ -8,15 +8,14 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 # 2. สร้าง System Restore Point
 Write-Host "--- กำลังสร้าง System Restore Point (กรุณารอ...) ---" -ForegroundColor Cyan
 try {
-    Checkpoint-Computer -Description "Before Importing Power Plans" -RestorePointType "MODIFY_SETTINGS"
+    Checkpoint-Computer -Description "PowerPlanInstall" -RestorePointType "MODIFY_SETTINGS"
     Write-Host "สร้าง Restore Point เรียบร้อย" -ForegroundColor Green
 } catch {
-    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (อาจปิดระบบนี้ไว้ หรือเพิ่งสร้างไปไม่นานนี้) ข้ามไป..." -ForegroundColor Yellow
+    Write-Host "ข้ามการสร้าง Restore Point..." -ForegroundColor Yellow
 }
 
-# 3. เตรียมโฟลเดอร์ทำงาน
-$workDir = "$env:TEMP\PowerPlans"
-if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue }
+# 3. ใช้โฟลเดอร์ชั่วคราวแบบสุ่ม เพื่อเลี่ยงปัญหาไฟล์ค้างจากการรันครั้งก่อน
+$workDir = "$env:TEMP\PowerPlans_" + [Guid]::NewGuid().ToString().Substring(0,8)
 New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
@@ -31,7 +30,7 @@ foreach ($name in $files.Keys) {
     Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
 }
 
-# 5. ฟังก์ชันดึง GUID และ Import
+# 5. ฟังก์ชัน Import
 function Import-PowerPlan {
     param([string]$FilePath)
     $output = powercfg -import "$FilePath"
@@ -41,7 +40,6 @@ function Import-PowerPlan {
 }
 
 Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Green
-
 $ultGuid = Import-PowerPlan "$workDir\Ultimate.pow"
 $kernGuid = Import-PowerPlan "$workDir\KernelOS.pow"
 
@@ -50,21 +48,8 @@ if ($ultGuid) {
     powercfg -setactive $ultGuid
     Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ ($ultGuid)" -ForegroundColor Green
 } else {
-    Write-Host "เกิดข้อผิดพลาดในการ Import Power Plans" -ForegroundColor Red
+    Write-Host "เกิดข้อผิดพลาดในการ Import" -ForegroundColor Red
 }
 
-# 7. ทำความสะอาดแบบปลอดภัย
-Write-Host "กำลังทำความสะอาดไฟล์ชั่วคราว..." -ForegroundColor Gray
-Set-Location $env:USERPROFILE
-Start-Sleep -Seconds 3 # รอให้ Windows ปล่อยการเข้าถึงไฟล์
-
-try {
-    # ลบเฉพาะไฟล์ข้างใน ไม่ลบโฟลเดอร์หลัก เพื่อป้องกัน Error "In use"
-    Remove-Item "$workDir\*" -Force -Recurse -ErrorAction SilentlyContinue
-    Remove-Item $workDir -Force -ErrorAction SilentlyContinue
-} catch {
-    Write-Host "ระบบยังล็อคไฟล์อยู่เล็กน้อย ไม่ต้องกังวลครับ Windows จะจัดการล้าง Temp ให้เอง" -ForegroundColor DarkGray
-}
-
-Write-Host "`nเสร็จสิ้น! กดปุ่มใดๆ เพื่อออกจากโปรแกรม..." -ForegroundColor White
-Read-Host
+Write-Host "`nเสร็จสิ้น! ทุกอย่างเรียบร้อยดีครับ" -ForegroundColor White
+Read-Host "กด Enter เพื่อปิดหน้าต่างนี้..."
