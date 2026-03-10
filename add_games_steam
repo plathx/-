@@ -3,7 +3,7 @@
 $steamPath = "C:\Program Files (x86)\Steam\Steam.exe"
 
 if (-not (Test-Path $steamPath)) {
-    Write-Host "ยังไม่มีsteamกรุณาติดตั้งsteam ก่อนรัน irm `"is.gd/add_games_steam`" | iex" -ForegroundColor Red
+    Write-Host "ยังไม่มี steam กรุณาติดตั้ง steam และล็อกอินให้เรียบร้อย ก่อนรัน irm `"is.gd/add_games_steam`" | iex" -ForegroundColor Red
     Write-Host "กำลังเปิดหน้าเว็บติดตั้ง Steam..." -ForegroundColor Yellow
     Start-Sleep -Seconds 3
     Start-Process "https://store.steampowered.com/about/"
