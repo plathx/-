@@ -1,7 +1,14 @@
-# 1. Require Administrator privileges
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Requesting Administrator privileges..."
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+# Require Administrator privileges
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    if ($PSCommandPath) {
+        Write-Host "Requesting Administrator privileges..."
+        Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    } else {
+        Write-Warning "This script requires Administrator privileges!"
+        Write-Host "Because you are running via 'irm | iex', it cannot auto-elevate."
+        Write-Host "Please open 'PowerShell as Administrator' and run the command again."
+    }
     exit
 }
 
@@ -77,14 +84,14 @@ if ($mainChoice -eq '1') {
         Write-Host "Executing script: $batFile ..."
         Set-Location -Path $batFolder
         
-        # สั่งรันและเก็บค่า Process เพื่อนำไปสั่งปิด
+        # Run process and capture its info
         $batProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batFile`"" -PassThru
         
         Write-Host "Waiting 3 seconds..."
         Start-Sleep -Seconds 3
         
-        # ตรวจสอบว่าถ้าหน้าต่างยังไม่ปิด ให้บังคับปิดทันที
-        if (-not $batProcess.HasExited) {
+        # Force close if it's still running
+        if ($batProcess -and -not $batProcess.HasExited) {
             Write-Host "Force closing the script..."
             Stop-Process -Id $batProcess.Id -Force -ErrorAction SilentlyContinue
         }
@@ -93,11 +100,8 @@ if ($mainChoice -eq '1') {
     }
 
     # Step 8: Clean up the main working directory
-    # ย้ายที่ทำงานออกมาที่ C:\ ก่อนลบ เพื่อไม่ให้ติดล็อคโฟลเดอร์
     Set-Location -Path "C:\"
     Write-Host "Cleaning up working directory ($workDir)..."
-    
-    # ลบแบบบังคับ
     Remove-Item -Path $workDir -Recurse -Force -ErrorAction SilentlyContinue
     
     Write-Host "Installation completed successfully."
@@ -135,10 +139,3 @@ else {
     Write-Host "Invalid choice. Exiting..."
     Start-Sleep -Seconds 3
 }
-```
-
-**สิ่งที่แก้ไขในเวอร์ชั่นนี้:**
-- ใช้คำสั่ง `Start-Process ... -PassThru` เพื่อให้โปรแกรมจำได้ว่า `.bat` ตัวนี้รันด้วย Process ID อะไร
-- ใช้ `Start-Sleep -Seconds 3` เพื่อรอ 3 วินาทีตามที่ต้องการ
-- ตรวจสอบด้วย `-not $batProcess.HasExited` หาก 3 วินาทีผ่านไปยังรันอยู่ จะใช้คำสั่ง `Stop-Process -Force` บังคับปิดทิ้งทันที
-- สั่งย้าย Directory การทำงานออกมาที่ `C:\` ก่อนลบเสมอ เพื่อป้องกันบัคโฟลเดอร์โดนล็อคจากตัว PowerShell เองครับ
