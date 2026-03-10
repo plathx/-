@@ -66,6 +66,9 @@ else {
     Log "AUX" "Install it at your own risk! Close this script if you don't want to."
     Log "WARN" "Pressing any key will download and install steamtools (UI-less)."
         
+    # ล้างปุ่มที่อาจจะกดค้างไว้ก่อนหน้านี้
+    while ([Console]::KeyAvailable) { $null = [Console]::ReadKey($true) }
+    
     # Wait for any key press
     [void][System.Console]::ReadKey($true)
     Write-Host
@@ -80,8 +83,12 @@ else {
         
         if (Test-Path $installerPath) {
             Log "WARN" "Installing Steamtools silently..."
-            # ใช้ /S สำหรับ Silent Install และซ่อนหน้าต่าง
+            # ใช้ /S สำหรับ Silent Install
             Start-Process -FilePath $installerPath -ArgumentList "/S" -WindowStyle Hidden -Wait
+            
+            # รอ 5 วินาที เผื่อให้ตัวติดตั้งคัดลอกไฟล์เบื้องหลังจนเสร็จ
+            Log "AUX" "Waiting for installation to finalize..."
+            Start-Sleep -Seconds 5
             
             if ( Test-Path $path ) {
                 Log "OK" "Steamtools installed successfully"
@@ -89,7 +96,7 @@ else {
                 Log "ERR" "Steamtools installation finished, but xinput1_4.dll was not found."
             }
             
-            # ลบไฟล์ติดตั้งออกหลังจากลงเสร็จ (คอมเมนต์ไว้ถ้าต้องการเก็บไฟล์ไว้)
+            # ลบไฟล์ติดตั้งออกหลังจากลงเสร็จ
             Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
         } else {
             Log "ERR" "Failed to locate the downloaded installer at $installerPath."
@@ -105,6 +112,11 @@ $milleniumInstalling = $false
 foreach ($file in @("millennium.dll", "python311.dll")) {
     if (!( Test-Path (Join-Path $steam $file) )) {
         
+        # --- ล้าง Input buffer ป้องกันการกดค้างจากขั้นตอนที่แล้ว ---
+        while ([Console]::KeyAvailable) {
+            $null = [Console]::ReadKey($true)
+        }
+        
         # Ask confirmation to download
         Log "ERR" "Millenium not found, installation process will start in 5 seconds."
         Log "WARN" "Press any key to cancel the installation."
@@ -114,6 +126,10 @@ foreach ($file in @("millennium.dll", "python311.dll")) {
             if ([Console]::KeyAvailable) {
                 Write-Host
                 Log "ERR" "Installation cancelled by user."
+                
+                # หยุดสคริปต์ให้เห็นข้อความก่อนปิด 
+                Log "AUX" "Press any key to exit..."
+                [void][System.Console]::ReadKey($true)
                 exit
             }
 
