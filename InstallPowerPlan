@@ -11,11 +11,12 @@ try {
     Checkpoint-Computer -Description "PowerPlanInstall" -RestorePointType "MODIFY_SETTINGS"
     Write-Host "สร้าง Restore Point เรียบร้อย" -ForegroundColor Green
 } catch {
-    Write-Host "ข้ามการสร้าง Restore Point..." -ForegroundColor Yellow
+    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (ข้ามขั้นตอน)..." -ForegroundColor Yellow
 }
 
-# 3. ใช้โฟลเดอร์ Temporary ของระบบ (สร้างโฟลเดอร์ใหม่ชื่อสุ่มทุกครั้ง)
-$workDir = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+# 3. สร้างโฟลเดอร์ใหม่ด้วยรหัสสุ่มทุกครั้ง เพื่อไม่ให้ชนกับโฟลเดอร์เดิมที่อาจจะติด Lock
+$randomName = [System.Guid]::NewGuid().ToString()
+$workDir = Join-Path $env:TEMP $randomName
 New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
@@ -27,13 +28,16 @@ $files = @{
 
 foreach ($name in $files.Keys) {
     Write-Host "กำลังดาวน์โหลด $name ..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
+    try {
+        Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
+    } catch {
+        Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด $name" -ForegroundColor Red
+    }
 }
 
 # 5. ฟังก์ชัน Import
 function Import-PowerPlan {
     param([string]$FilePath)
-    # รับค่า Output ทั้งหมดเพื่อเอา GUID
     $output = powercfg -import "$FilePath"
     $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
     if ($match.Success) { return $match.Value.Trim('{}') }
@@ -47,15 +51,13 @@ $kernGuid = Import-PowerPlan "$workDir\KernelOS.pow"
 # 6. ตั้งค่า Active
 if ($ultGuid) {
     powercfg -setactive $ultGuid
-    Write-Host "------------------------------------------------"
-    Write-Host "ติดตั้งสำเร็จ!" -ForegroundColor Green
-    Write-Host "Ultimate Performance GUID: $ultGuid"
-    Write-Host "KernelOS Performance GUID: $kernGuid"
-    Write-Host "------------------------------------------------"
+    Write-Host "------------------------------------------------" -ForegroundColor Green
+    Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ!" -ForegroundColor Green
+    Write-Host "------------------------------------------------" -ForegroundColor Green
 } else {
-    Write-Host "เกิดข้อผิดพลาดในการ Import" -ForegroundColor Red
+    Write-Host "ไม่สามารถ Import แผนพลังงานได้" -ForegroundColor Red
 }
 
-# จบการทำงาน (ไม่ต้องลบโฟลเดอร์ เพื่อป้องกัน Error File in use)
-Write-Host "สคริปต์ทำงานเสร็จสิ้นแล้ว" -ForegroundColor White
+# จบการทำงาน - ไม่มีการลบโฟลเดอร์เพื่อป้องกัน Error ครับ
+Write-Host "การทำงานเสร็จสิ้น" -ForegroundColor White
 Read-Host "กด Enter เพื่อปิดหน้าต่างนี้..."
