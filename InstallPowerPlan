@@ -1,0 +1,46 @@
+# 1. ตรวจสอบสิทธิ์ Admin
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Start-Process powershell -ArgumentList $arguments -Verb RunAs
+    exit
+}
+
+Write-Host "--- กำลังสร้าง System Restore Point (กรุณารอ...) ---" -ForegroundColor Cyan
+Enable-ComputerRestore -Drive "C:\" 2>$null
+Checkpoint-Computer -Description "Before Importing Power Plans" -RestorePointType "MODIFY_SETTINGS"
+
+# 2. ตั้งค่าโฟลเดอร์ทำงาน
+$workDir = "$env:TEMP\PowerPlans"
+if (!(Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir | Out-Null }
+Set-Location $workDir
+
+# 3. ดาวน์โหลดไฟล์
+$files = @{
+    "KernelOS.pow" = "https://is.gd/dtF1gW"
+    "Ultimate.pow" = "https://is.gd/Fly5ky"
+}
+
+foreach ($name in $files.Keys) {
+    Write-Host "กำลังดาวน์โหลด $name ..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name"
+}
+
+# 4. Import Power Plans
+Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Green
+
+# Import Ultimate Performance
+$ult = powercfg -import "$workDir\Ultimate.pow"
+$ultGuid = ($ult -split " ")[3]
+
+# Import KernelOS
+$kernel = powercfg -import "$workDir\KernelOS.pow"
+$kernGuid = ($kernel -split " ")[3]
+
+# 5. ตั้งค่า Active เป็น Ultimate Performance
+powercfg -setactive $ultGuid
+Write-Host "ติดตั้งสำเร็จ! ตั้งค่า Ultimate Performance เป็นแผนปัจจุบันแล้ว" -ForegroundColor Green
+
+# 6. ลบไฟล์ชั่วคราว
+Remove-Item $workDir -Recurse -Force
+Write-Host "กดปุ่มใดๆ เพื่อออกจากโปรแกรม..."
+Read-Host
