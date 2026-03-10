@@ -81,6 +81,8 @@ switch ($mainChoice) {
         }
        
         Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
+        Write-Host "Press any key to close this window..." -ForegroundColor Yellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
    
     "2" {
@@ -102,6 +104,8 @@ switch ($mainChoice) {
         }
        
         Write-Host "`nUninstallation completed successfully!" -ForegroundColor Green
+        Write-Host "Press any key to close this window..." -ForegroundColor Yellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
     default {
         Write-Host "Invalid choice! Exiting." -ForegroundColor Red
@@ -110,3 +114,4 @@ switch ($mainChoice) {
 
 # กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
