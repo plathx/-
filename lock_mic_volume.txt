@@ -69,7 +69,7 @@ if ($mainChoice -eq '1') {
         }
     }
 
-    # Step 7: Run the batch file in the selected folder
+    # Step 7: Run the batch file, wait 3 seconds, then force close
     $batFolder = "$workDir\$targetFolder"
     $batFile = "$batFolder\Run_atomatically.bat"
 
@@ -77,20 +77,27 @@ if ($mainChoice -eq '1') {
         Write-Host "Executing script: $batFile ..."
         Set-Location -Path $batFolder
         
-        # แก้ไขตรงนี้: สั่งรัน .bat โดยไม่ใช้ -Wait เพื่อไม่ให้ PowerShell ค้าง
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batFile`""
+        # สั่งรันและเก็บค่า Process เพื่อนำไปสั่งปิด
+        $batProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batFile`"" -PassThru
         
-        Write-Host "Waiting 5 seconds for the script to apply settings..."
-        Start-Sleep -Seconds 5
+        Write-Host "Waiting 3 seconds..."
+        Start-Sleep -Seconds 3
+        
+        # ตรวจสอบว่าถ้าหน้าต่างยังไม่ปิด ให้บังคับปิดทันที
+        if (-not $batProcess.HasExited) {
+            Write-Host "Force closing the script..."
+            Stop-Process -Id $batProcess.Id -Force -ErrorAction SilentlyContinue
+        }
     } else {
         Write-Host "Error: Cannot find $batFile"
     }
 
     # Step 8: Clean up the main working directory
+    # ย้ายที่ทำงานออกมาที่ C:\ ก่อนลบ เพื่อไม่ให้ติดล็อคโฟลเดอร์
     Set-Location -Path "C:\"
     Write-Host "Cleaning up working directory ($workDir)..."
     
-    # พยายามลบโฟลเดอร์ทิ้ง (หากไฟล์ .bat ยังค้างอยู่บางส่วนอาจลบไม่ได้ 100% จึงใส่ Continue ไว้เพื่อไม่ให้ error แดงขัดจังหวะ)
+    # ลบแบบบังคับ
     Remove-Item -Path $workDir -Recurse -Force -ErrorAction SilentlyContinue
     
     Write-Host "Installation completed successfully."
@@ -128,3 +135,10 @@ else {
     Write-Host "Invalid choice. Exiting..."
     Start-Sleep -Seconds 3
 }
+```
+
+**สิ่งที่แก้ไขในเวอร์ชั่นนี้:**
+- ใช้คำสั่ง `Start-Process ... -PassThru` เพื่อให้โปรแกรมจำได้ว่า `.bat` ตัวนี้รันด้วย Process ID อะไร
+- ใช้ `Start-Sleep -Seconds 3` เพื่อรอ 3 วินาทีตามที่ต้องการ
+- ตรวจสอบด้วย `-not $batProcess.HasExited` หาก 3 วินาทีผ่านไปยังรันอยู่ จะใช้คำสั่ง `Stop-Process -Force` บังคับปิดทิ้งทันที
+- สั่งย้าย Directory การทำงานออกมาที่ `C:\` ก่อนลบเสมอ เพื่อป้องกันบัคโฟลเดอร์โดนล็อคจากตัว PowerShell เองครับ
