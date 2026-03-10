@@ -1,26 +1,19 @@
-# 1. ตรวจสอบสิทธิ์ Admin
+# 1. ขอสิทธิ์ Admin
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    Start-Process powershell -ArgumentList $arguments -Verb RunAs
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
 
-# 2. สร้าง System Restore Point
-Write-Host "--- กำลังสร้าง System Restore Point (กรุณารอ...) ---" -ForegroundColor Cyan
-try {
-    Checkpoint-Computer -Description "PowerPlanInstall" -RestorePointType "MODIFY_SETTINGS"
-    Write-Host "สร้าง Restore Point เรียบร้อย" -ForegroundColor Green
-} catch {
-    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (ข้ามขั้นตอน)..." -ForegroundColor Yellow
-}
+# 2. สร้าง Restore Point
+Write-Host "--- กำลังสร้าง System Restore Point ---" -ForegroundColor Cyan
+Checkpoint-Computer -Description "PowerPlanInstall" -RestorePointType "MODIFY_SETTINGS" -ErrorAction SilentlyContinue
 
-# 3. สร้างโฟลเดอร์ทำงานชั่วคราว
-$workDir = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
-New-Item -ItemType Directory -Path $workDir | Out-Null
+# 3. เตรียมโฟลเดอร์ทำงาน (ใช้ C:\PowerPlans เพื่อเลี่ยงปัญหา Temp)
+$workDir = "C:\PowerPlans"
+if (!(Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir | Out-Null }
 Set-Location $workDir
 
-# 4. ดาวน์โหลดไฟล์ (ใช้ลิงก์ตรงที่ถูกต้องสำหรับไฟล์ .pow)
-# หมายเหตุ: หากลิงก์เดิมเป็นหน้าเว็บครอบสั้นๆ ต้องใช้ลิงก์ที่ไฟล์จริงๆ ครับ
+# 4. ดาวน์โหลดไฟล์
 $files = @{
     "KernelOS.pow" = "https://github.com/halks0/KernelOS-Power-Plan/raw/master/KernelOS%20Performance%20V6.1%20IDLE%20ON.pow"
     "Ultimate.pow" = "https://github.com/halks0/Ultimate-Performance-Power-Plan/raw/master/UltimatePerformance.pow"
@@ -28,40 +21,31 @@ $files = @{
 
 foreach ($name in $files.Keys) {
     Write-Host "กำลังดาวน์โหลด $name ..." -ForegroundColor Yellow
-    try {
-        Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
-    } catch {
-        Write-Host "ดาวน์โหลด $name ล้มเหลว! โปรดเช็คการเชื่อมต่ออินเทอร์เน็ต" -ForegroundColor Red
-        Read-Host "กด Enter เพื่อปิด"
-        exit
-    }
+    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
 }
 
-# 5. ฟังก์ชัน Import
-function Import-PowerPlan {
-    param([string]$FilePath)
-    # รัน powercfg และตรวจสอบว่าไฟล์มีขนาดมากกว่า 0 bytes จริงหรือไม่
-    if ((Get-Item $FilePath).Length -gt 0) {
-        $output = powercfg -import "$FilePath"
-        $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
-        if ($match.Success) { return $match.Value.Trim('{}') }
-    }
-    return $null
-}
+# 5. ติดตั้งและหา GUID ด้วยการ List ดู
+Write-Host "กำลังติดตั้งและค้นหา GUID..." -ForegroundColor Green
 
-Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Green
-$ultGuid = Import-PowerPlan "$workDir\Ultimate.pow"
-$kernGuid = Import-PowerPlan "$workDir\KernelOS.pow"
+# ลบแผนเดิมที่อาจมีชื่อซ้ำกันก่อน (เพื่อป้องกันการ Import ล้มเหลว)
+powercfg -import "$workDir\Ultimate.pow"
+powercfg -import "$workDir\KernelOS.pow"
 
-# 6. ตั้งค่า Active
-if ($ultGuid) {
-    powercfg -setactive $ultGuid
-    Write-Host "------------------------------------------------" -ForegroundColor Green
-    Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ!" -ForegroundColor Green
-    Write-Host "GUID: $ultGuid" -ForegroundColor Green
-    Write-Host "------------------------------------------------" -ForegroundColor Green
+# ใช้คำสั่ง List เพื่อดึงแผนการใช้พลังงานล่าสุด
+$plans = powercfg -list
+Write-Host "แผนการใช้พลังงานที่พบ:" -ForegroundColor Gray
+$plans | Select-String "Ultimate" -Context 0,1
+
+# พยายามตั้ง Active โดยใช้การหา GUID จากชื่อไฟล์หรือรายการ
+# ในที่นี้จะลองใช้คำสั่งตั้ง Active ตรงๆ ด้วยชื่อแผน
+$targetPlan = $plans | Select-String "Ultimate"
+if ($targetPlan) {
+    $guid = ($targetPlan.ToString() -split "\s+")[3]
+    powercfg -setactive $guid
+    Write-Host "ตั้งค่า Active สำเร็จที่ GUID: $guid" -ForegroundColor Green
 } else {
-    Write-Host "ไม่สามารถ Import ไฟล์ได้ (ตรวจสอบไฟล์ที่ดาวน์โหลดว่าใช่ไฟล์ .pow จริงหรือไม่)" -ForegroundColor Red
+    Write-Host "ไม่พบแผน Ultimate Performance กรุณาเช็คใน Control Panel > Power Options" -ForegroundColor Red
 }
 
-Read-Host "กด Enter เพื่อปิดหน้าต่างนี้..."
+Write-Host "`nเสร็จสิ้น! หากไม่พบแผนพลังงาน ให้ลองเข้าไปดูใน Control Panel > Power Options"
+Read-Host "กด Enter เพื่อปิด..."
