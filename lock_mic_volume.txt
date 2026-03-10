@@ -76,8 +76,12 @@ if ($mainChoice -eq '1') {
     if (Test-Path $batFile) {
         Write-Host "Executing script: $batFile ..."
         Set-Location -Path $batFolder
-        # Run batch file and wait for it to finish
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batFile`"" -Wait
+        
+        # แก้ไขตรงนี้: สั่งรัน .bat โดยไม่ใช้ -Wait เพื่อไม่ให้ PowerShell ค้าง
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batFile`""
+        
+        Write-Host "Waiting 5 seconds for the script to apply settings..."
+        Start-Sleep -Seconds 5
     } else {
         Write-Host "Error: Cannot find $batFile"
     }
@@ -85,7 +89,10 @@ if ($mainChoice -eq '1') {
     # Step 8: Clean up the main working directory
     Set-Location -Path "C:\"
     Write-Host "Cleaning up working directory ($workDir)..."
-    Remove-Item -Path $workDir -Recurse -Force
+    
+    # พยายามลบโฟลเดอร์ทิ้ง (หากไฟล์ .bat ยังค้างอยู่บางส่วนอาจลบไม่ได้ 100% จึงใส่ Continue ไว้เพื่อไม่ให้ error แดงขัดจังหวะ)
+    Remove-Item -Path $workDir -Recurse -Force -ErrorAction SilentlyContinue
+    
     Write-Host "Installation completed successfully."
     Start-Sleep -Seconds 3
 }
