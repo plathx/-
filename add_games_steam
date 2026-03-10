@@ -1,8 +1,9 @@
 $steamPath = "C:\Program Files (x86)\Steam\Steam.exe"
 
-if ($null -eq $steamPath) {
+# ใช้ Test-Path เพื่อเช็คว่าไฟล์มีตัวตนอยู่จริงหรือไม่
+if (-not (Test-Path $steamPath)) {
     Write-Host "ยังไม่มี Steam กรุณาติดตั้ง Steam ก่อนรันคำสั่ง" -ForegroundColor Yellow
-	Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 3
     Start-Process "https://store.steampowered.com/about/"
 } else {
     Write-Host "พบ Steam ในเครื่อง กำลังดำเนินการ..." -ForegroundColor Green
