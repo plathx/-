@@ -6,10 +6,9 @@ param(
 )
 
 ## Configure this
-$Host.UI.RawUI.WindowTitle = "Luatools plugin installer | .gg/luatools"
+$Host.UI.RawUI.WindowTitle = "add_games_steam"
 $name = "luatools" # automatic first letter uppercase included
 $link = "https://github.com/madoiscool/ltsteamplugin/releases/latest/download/ltsteamplugin.zip"
-$milleniumTimer = 5 # in seconds for auto-installation
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 > $null
@@ -296,3 +295,4 @@ Log "WARN" "But i had to turn updates of millennium off."
 Log "WARN" "In future, they will come back but in the meantime:"
 Log "OK" "Manually check for updates of millennium if you want up to date."
 Log "AUX" "Millennium is working now tho (latest version)."
+
