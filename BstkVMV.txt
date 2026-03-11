@@ -1,5 +1,5 @@
 $ProcessName = "HD-Player"
-$DllPath = "C:\test\BstkVMV.dll"
+$DllPath = "C:\Users\woran\OneDrive\เอกสาร\airdrop\ฟหกฟหหกหฟ\ฟหกฟหหกหฟ\BstkVMV.dll"
 
 if (-not (Test-Path $DllPath)) {
     Write-Host "[-] Error: DLL file not found at $DllPath" -ForegroundColor Red
