@@ -1,4 +1,7 @@
-# ฟังก์ชันดาวน์โหลดและแตกไฟล์ (แบบไม่มี .NET Zip)
+# เคลียร์หน่วยความจำก่อนเริ่ม
+Remove-Variable * -ErrorAction SilentlyContinue
+
+# ฟังก์ชันดาวน์โหลดและแตกไฟล์
 function Get-CleanRAM {
     $targetDir = "C:\phwyverysad"
     $zipPath = "$targetDir\CleanRAM.zip"
@@ -9,12 +12,9 @@ function Get-CleanRAM {
     $client = New-Object System.Net.WebClient
     $client.DownloadFile("https://is.gd/pURUxe", $zipPath)
     
-    Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
-    # ใช้คำสั่ง Shell.Application ซึ่งเป็นวิธีที่เสถียรที่สุดใน Windows
-    $shell = New-Object -ComObject Shell.Application
-    $zipFile = $shell.NameSpace($zipPath)
-    $destination = $shell.NameSpace($targetDir)
-    $destination.CopyHere($zipFile.Items(), 16)
+    Write-Host "กำลังแตกไฟล์ด้วยคำสั่งมาตรฐาน..." -ForegroundColor Cyan
+    # ใช้ Expand-Archive เท่านั้น ไม่มีการเรียก [System.IO.Compression.ZipFile] อีกต่อไป
+    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
     
     # ย้าย EmptyStandbyList.exe ไปยัง System32
     if (Test-Path "$targetDir\EmptyStandbyList.exe") {
@@ -32,7 +32,7 @@ function Cleanup {
     }
 }
 
-# สร้างเมนูตัวเลือก
+# เมนู
 Write-Host "--- เมนูจัดการ RAM ---"
 Write-Host "1. สร้างทางลัด"
 Write-Host "2. ตั้งเวลาเคลียร์อัตโนมัติ"
@@ -45,7 +45,6 @@ switch ($choice) {
         $desktopPath = [System.IO.Path]::Combine($env:USERPROFILE, "Desktop")
         $oneDriveDesktop = [System.IO.Path]::Combine($env:USERPROFILE, "OneDrive\Desktop")
         
-        # ค้นหาไฟล์ .lnk ในโฟลเดอร์ C:\phwyverysad
         $shortcut = Get-ChildItem -Path "C:\phwyverysad" -Filter "*.lnk" | Select-Object -First 1
         if ($shortcut) {
             Copy-Item -Path $shortcut.FullName -Destination $desktopPath -Force
@@ -68,6 +67,4 @@ switch ($choice) {
         schtasks /delete /tn "AutoCleanRAM" /f
         Write-Host "ยกเลิกการตั้งเวลาอัตโนมัติเรียบร้อยแล้ว" -ForegroundColor Yellow
     }
-    
-    Default { Write-Host "ตัวเลือกไม่ถูกต้อง" -ForegroundColor Red }
 }
