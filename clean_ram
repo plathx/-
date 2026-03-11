@@ -13,7 +13,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 function Show-Menu {
     Clear-Host
     Write-Host "======================================" -ForegroundColor Cyan
-    Write-Host "    CleanRAM Installer via Remote" -ForegroundColor Yellow
+    Write-Host "    CleanRAM Installer (.NET Edition)" -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "1. สร้างทางลัด (Download & Move to Desktop)"
     Write-Host "2. ตั้งเวลาเคลียร์อัตโนมัติ (Scheduled Task)"
@@ -31,34 +31,32 @@ function Invoke-DownloadAndExtract {
         New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
     }
 
-    Write-Host "กำลังดาวน์โหลดไฟล์โดยใช้ curl (System Engine)..." -ForegroundColor Green
+    Write-Host "กำลังดาวน์โหลดไฟล์โดยใช้ .NET (WebClient)..." -ForegroundColor Green
     
     try {
-        # ใช้ curl.exe เพื่อรองรับการ Redirect และความเสถียรที่สูงกว่า
-        # -L คือติดตาม redirect, -o คือระบุไฟล์ขาออก
-        curl.exe -L $url -o $zipFile
+        # ตั้งค่าการเชื่อมต่อแบบ .NET
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $webClient = New-Object System.Net.WebClient
+        
+        # ดาวน์โหลดไปยังโฟลเดอร์ที่กำหนด
+        $webClient.DownloadFile($url, $zipFile)
 
         if (!(Test-Path $zipFile) -or (Get-Item $zipFile).Length -lt 1024) {
-            Write-Host "ไฟล์ที่ดาวน์โหลดมาไม่ถูกต้องหรือมีขนาดเล็กเกินไป ลิงก์อาจหมดอายุ" -ForegroundColor Red
+            Write-Host "ไฟล์ที่ดาวน์โหลดมาไม่ถูกต้อง ลิงก์อาจจะเสีย" -ForegroundColor Red
             return $false
         }
 
         Write-Host "ดาวน์โหลดสำเร็จ กำลังแตกไฟล์..." -ForegroundColor Green
         
-        # หน่วงเวลาเล็กน้อยเพื่อให้ระบบไฟล์พร้อมใช้งาน
-        Start-Sleep -Seconds 1
-        
-        # แตกไฟล์
+        # แตกไฟล์ Zip
         Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
 
+        # ย้ายไฟล์ EmptyStandbyList.exe ไปยัง System32
         if (Test-Path "$tempDir\EmptyStandbyList.exe") {
-            if (!(Test-Path "C:\Windows\System32")) {
-                New-Item -ItemType Directory -Force -Path "C:\Windows\System32" | Out-Null
-            }
             Move-Item -Path "$tempDir\EmptyStandbyList.exe" -Destination "C:\Windows\System32\EmptyStandbyList.exe" -Force
             Write-Host "ย้ายไฟล์ไปที่ System32 เรียบร้อยแล้ว" -ForegroundColor Green
         } else {
-            Write-Host "ไม่พบไฟล์ EmptyStandbyList.exe ภายใน Zip" -ForegroundColor Red
+            Write-Host "ไม่พบไฟล์ EmptyStandbyList.exe ใน Zip" -ForegroundColor Red
             return $false
         }
     } catch {
@@ -72,7 +70,7 @@ function Remove-TempFolder {
     $tempDir = "C:\phwyverysad"
     if (Test-Path $tempDir) {
         Remove-Item -Path $tempDir -Recurse -Force
-        Write-Host "ลบไฟล์ชั่วคราวเรียบร้อย" -ForegroundColor Gray
+        Write-Host "ลบโฟลเดอร์ชั่วคราว C:\phwyverysad เรียบร้อย" -ForegroundColor Gray
     }
 }
 
@@ -87,41 +85,43 @@ while ($isRunning) {
             if (Invoke-DownloadAndExtract) {
                 $tempDir = "C:\phwyverysad"
                 $lnkFile = "$tempDir\CleanRAM.lnk"
+                
+                # กำหนดที่อยู่ Desktop ทั้งหมดที่ควรจะเป็นไปได้
                 $desktops = @("$env:USERPROFILE\Desktop", "$env:USERPROFILE\OneDrive\Desktop")
 
                 if (Test-Path $lnkFile) {
                     foreach ($d in $desktops) {
                         if (Test-Path $d) {
                             Copy-Item -Path $lnkFile -Destination "$d\CleanRAM.lnk" -Force
-                            Write-Host "วางทางลัดที่ $d" -ForegroundColor Green
+                            Write-Host "ย้ายทางลัดไปยัง $d เรียบร้อย" -ForegroundColor Green
                         }
                     }
-                } else {
-                    Write-Host "ไม่พบไฟล์ CleanRAM.lnk ในแพ็กเกจ" -ForegroundColor Yellow
                 }
                 Remove-TempFolder
             }
             Read-Host "กด Enter เพื่อกลับหน้าเมนู..."
         }
         '2' {
-            $min = Read-Host "ต้องการให้ทำงานทุกกี่นาที (เช่น 5, 10, 30)"
+            $min = Read-Host "ต้องการให้ทำงานทุกกี่นาที"
             if ($min -match '^\d+$') {
                 if (Invoke-DownloadAndExtract) {
+                    Write-Host "กำลังตั้งเวลา Task 'AutoCleanRAM' ทุก $min นาที..." -ForegroundColor Green
                     $taskCmd = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
                     $args = "/create /tn `"AutoCleanRAM`" /sc MINUTE /mo $min /rl HIGHEST /ru SYSTEM /tr `"$taskCmd`" /f"
                     Start-Process "schtasks.exe" -ArgumentList $args -NoNewWindow -Wait
-                    Write-Host "สร้าง Task สำเร็จ: เคลียร์ RAM ทุกๆ $min นาที" -ForegroundColor Green
+                    
                     Remove-TempFolder
+                    Write-Host "ตั้งค่าเสร็จสมบูรณ์" -ForegroundColor Green
                 }
             } else {
-                Write-Host "กรุณาใส่เฉพาะตัวเลข" -ForegroundColor Red
+                Write-Host "กรุณาใส่เฉพาะตัวเลขนาที" -ForegroundColor Red
             }
             Read-Host "กด Enter เพื่อกลับหน้าเมนู..."
         }
         '3' {
-            Write-Host "กำลังลบ Task 'AutoCleanRAM'..." -ForegroundColor Cyan
+            Write-Host "กำลังยกเลิกการตั้งเวลา..." -ForegroundColor Cyan
             Start-Process "schtasks.exe" -ArgumentList "/delete /tn `"AutoCleanRAM`" /f" -NoNewWindow -Wait
-            Write-Host "ยกเลิกการตั้งเวลาเรียบร้อย" -ForegroundColor Green
+            Write-Host "ยกเลิก Task เรียบร้อยแล้ว" -ForegroundColor Green
             Read-Host "กด Enter เพื่อกลับหน้าเมนู..."
         }
         '4' {
