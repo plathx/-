@@ -6,14 +6,17 @@
     3. ยกเลิกการตั้งเวลา
 #>
 
-# ตรวจสอบสิทธิ์ Admin (จำเป็นสำหรับการย้ายไฟล์ไป System32 และสร้าง Task)
+# ตรวจสอบสิทธิ์ Admin
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "กรุณารัน PowerShell ในฐานะ Administrator (Run as Administrator)" -ForegroundColor Red
     return
 }
 
+# กำหนดค่า TLS ให้รองรับการดาวน์โหลดสมัยใหม่
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 $workDir = "C:\phwyverysad"
-$downloadUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/CleanRAM.zip"
+$downloadUrl = "https://is.gd/pURUxe"
 $zipFile = "$workDir\CleanRAM.zip"
 $exeName = "EmptyStandbyList.exe"
 $destExe = "C:\Windows\System32\$exeName"
@@ -31,12 +34,15 @@ function Show-Menu {
 }
 
 function Prepare-Files {
-    # สร้างโฟลเดอร์
-    if (-not (Test-Path $workDir)) { New-Item -Path $workDir -ItemType Directory | Out-Null }
+    # ล้างโฟลเดอร์เก่าก่อนเริ่ม (ป้องกันไฟล์ค้างที่เสีย)
+    if (Test-Path $workDir) { Remove-Item -Path $workDir -Recurse -Force | Out-Null }
+    New-Item -Path $workDir -ItemType Directory | Out-Null
     
     Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Yellow
-    # ใช้ .NET Framework สำหรับการดาวน์โหลด
     $webClient = New-Object System.Net.WebClient
+    # เพิ่ม User-Agent เพื่อป้องกันบางเว็บบล็อกการโหลดจากสคริปต์
+    $webClient.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)")
+    
     try {
         $webClient.DownloadFile($downloadUrl, $zipFile)
     } catch {
@@ -44,12 +50,27 @@ function Prepare-Files {
         return $false
     }
 
-    Write-Host "กำลังแตกไฟล์..." -ForegroundColor Yellow
-    Expand-Archive -Path $zipFile -DestinationPath $workDir -Force
+    # ตรวจสอบขนาดไฟล์ ถ้าไฟล์เล็กเกินไป (เช่น < 1KB) แสดงว่าโหลดมาผิด
+    if ((Get-Item $zipFile).Length -lt 1024) {
+        Write-Host "ไฟล์ที่ดาวน์โหลดมาไม่สมบูรณ์ หรือลิ้งก์เสีย" -ForegroundColor Red
+        return $false
+    }
 
-    # ย้ายไฟล์ EXE ไปยัง System32
+    Write-Host "กำลังแตกไฟล์..." -ForegroundColor Yellow
+    try {
+        Expand-Archive -Path $zipFile -DestinationPath $workDir -Force
+    } catch {
+        Write-Host "ไม่สามารถแตกไฟล์ ZIP ได้ ไฟล์อาจจะเสีย (End of Central Directory error)" -ForegroundColor Red
+        return $false
+    }
+
+    # ตรวจสอบว่ามีไฟล์ EXE จริงไหมก่อนย้าย
     if (Test-Path "$workDir\$exeName") {
         Move-Item -Path "$workDir\$exeName" -Destination $destExe -Force
+        Write-Host "ติดตั้งไฟล์ระบบเรียบร้อยแล้ว" -ForegroundColor Green
+    } else {
+        Write-Host "ไม่พบไฟล์ $exeName ในแพ็กเกจที่แตกออกมา" -ForegroundColor Red
+        return $false
     }
     
     return $true
@@ -69,21 +90,23 @@ $choice = Read-Host "เลือกตัวเลือก (1-3)"
 switch ($choice) {
     "1" {
         if (Prepare-Files) {
-            # เส้นทาง Desktop (ปกติ และ OneDrive)
             $paths = @(
                 "$env:USERPROFILE\Desktop\CleanRAM.lnk",
                 "$env:USERPROFILE\OneDrive\Desktop\CleanRAM.lnk"
             )
 
+            $success = $false
             foreach ($path in $paths) {
                 $parentDir = Split-Path $path
                 if (Test-Path $parentDir) {
                     if (Test-Path "$workDir\CleanRAM.lnk") {
                         Copy-Item -Path "$workDir\CleanRAM.lnk" -Destination $path -Force
                         Write-Host "สร้าง Shortcut ที่: $path" -ForegroundColor Green
+                        $success = $true
                     }
                 }
             }
+            if (-not $success) { Write-Host "ไม่พบไฟล์ CleanRAM.lnk หรือหาโฟลเดอร์ Desktop ไม่พบ" -ForegroundColor Red }
             Cleanup-WorkDir
         }
     }
@@ -92,14 +115,14 @@ switch ($choice) {
         $minutes = Read-Host "ระบุจำนวนเวลา (หน่วยนาที)"
         if ($minutes -as [int]) {
             if (Prepare-Files) {
-                # สร้าง Task Scheduler
                 $taskName = "AutoCleanRAM"
                 $action = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
                 
-                # รันคำสั่ง schtasks
                 schtasks /create /tn $taskName /sc MINUTE /mo $minutes /rl HIGHEST /ru SYSTEM /tr $action /f
                 
-                Write-Host "ตั้งเวลาล้าง RAM ทุกๆ $minutes นาที เรียบร้อยแล้ว" -ForegroundColor Green
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "ตั้งเวลาล้าง RAM ทุกๆ $minutes นาที เรียบร้อยแล้ว" -ForegroundColor Green
+                }
                 Cleanup-WorkDir
             }
         } else {
@@ -113,17 +136,12 @@ switch ($choice) {
         if ($LASTEXITCODE -eq 0) {
             Write-Host "ยกเลิกการตั้งเวลาเรียบร้อยแล้ว" -ForegroundColor Green
         } else {
-            Write-Host "ไม่พบการตั้งเวลาหรือมีข้อผิดพลาด" -ForegroundColor Red
+            Write-Host "ไม่พบการตั้งเวลา หรือมีข้อผิดพลาดเกิดขึ้น" -ForegroundColor Red
         }
     }
 
-    "Q" {
-        exit
-    }
-
-    Default {
-        Write-Host "ตัวเลือกไม่ถูกต้อง" -ForegroundColor Red
-    }
+    "Q" { exit }
+    Default { Write-Host "ตัวเลือกไม่ถูกต้อง" -ForegroundColor Red }
 }
 
 Write-Host "`nกดปุ่มใดก็ได้เพื่อจบการทำงาน..."
