@@ -1,122 +1,135 @@
-# สคริปต์จัดการการเคลียร์ RAM (Working Sets, Standby List, Modified Page List)
-# ต้องรันด้วยสิทธิ์ Administrator เท่านั้น
+# Script to manage Memory Cleaning using EmptyStandbyList.exe
+# Run this script as Administrator
 
-# ตรวจสอบสิทธิ์ Administrator
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "กรุณารันสคริปต์นี้ในฐานะ Administrator (Run as Administrator)" -ForegroundColor Red
-    pause
-    exit
+function Show-Menu {
+    Clear-Host
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "   Memory Cleaner Utility Tool (Admin)" -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "1. สร้างทางลัด (Create Shortcut)"
+    Write-Host "2. ตั้งเวลาเคลียร์อัตโนมัติ (Schedule Auto Clean)"
+    Write-Host "3. ยกเลิกการตั้งเวลาอัตโนมัติ (Remove Schedule)"
+    Write-Host "4. ออก (Exit)"
+    Write-Host "==========================================" -ForegroundColor Cyan
 }
 
 function Download-EmptyStandbyList {
     $url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/EmptyStandbyList.exe"
-    $destination = "C:\Windows\System32\EmptyStandbyList.exe"
+    $dest = "C:\Windows\System32\EmptyStandbyList.exe"
     
-    if (-not (Test-Path $destination)) {
-        Write-Host "กำลังดาวน์โหลดไฟล์ EmptyStandbyList.exe..." -ForegroundColor Cyan
+    if (-not (Test-Path $dest)) {
+        Write-Host "กำลังดาวน์โหลด EmptyStandbyList.exe..." -ForegroundColor Yellow
         try {
-            # ใช้ .NET WebClient ในการดาวน์โหลด
+            # Use .NET WebClient for download as requested
             $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFile($url, $destination)
-            Write-Host "ดาวน์โหลดเสร็จสมบูรณ์ที่ $destination" -ForegroundColor Green
-        } catch {
-            Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด: $_" -ForegroundColor Red
-            pause
-            exit
+            $webClient.DownloadFile($url, $dest)
+            Write-Host "ดาวน์โหลดเสร็จสมบูรณ์ที่: $dest" -ForegroundColor Green
+        }
+        catch {
+            Write-Error "ดาวน์โหลดล้มเหลว: $($_.Exception.Message)"
+            return $false
         }
     } else {
-        Write-Host "พบไฟล์ EmptyStandbyList.exe อยู่แล้วในระบบ" -ForegroundColor Yellow
+        Write-Host "ตรวจพบไฟล์ EmptyStandbyList.exe อยู่ในระบบแล้ว" -ForegroundColor Gray
     }
+    return $true
 }
 
-function Cleanup-TempFolder {
+function Remove-TempFile {
     $tempPath = "C:\phwyverysad"
     if (Test-Path $tempPath) {
-        Write-Host "กำลังลบไฟล์ชั่วคราว $tempPath..." -ForegroundColor Gray
+        Write-Host "กำลังลบไฟล์ชั่วคราว: $tempPath" -ForegroundColor DarkGray
         Remove-Item -Path $tempPath -Force -Recurse -ErrorAction SilentlyContinue
     }
 }
 
-function New-AdminShortcut([string]$shortcutPath, [string]$target, [string]$args) {
-    try {
-        $wshShell = New-Object -ComObject WScript.Shell
-        $shortcut = $wshShell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = $target
-        $shortcut.Arguments = $args
-        $shortcut.WorkingDirectory = "C:\Windows\System32"
-        $shortcut.IconLocation = "$target,0"
-        $shortcut.Save()
-
-        # แก้ไขไบนารีของไฟล์ .lnk เพื่อเปิดใช้งาน "Run as Administrator"
-        $bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
-        $bytes[0x15] = $bytes[0x15] -bor 0x20
-        [System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
-        Write-Host "สร้างทางลัดที่: $shortcutPath" -ForegroundColor Green
-    } catch {
-        Write-Host "ไม่สามารถสร้างทางลัดที่ $shortcutPath ได้ (อาจไม่มีโฟลเดอร์นี้)" -ForegroundColor Yellow
-    }
+# Check Admin Privileges
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "กรุณารัน PowerShell ในฐานะ Administrator เพื่อการทำงานที่สมบูรณ์"
+    pause
+    exit
 }
 
-# --- เมนูหลัก ---
-Clear-Host
-Write-Host "======================================" -ForegroundColor Magenta
-Write-Host "   โปรแกรมจัดการการเคลียร์ RAM" -ForegroundColor White
-Write-Host "======================================" -ForegroundColor Magenta
-Write-Host "1. สร้างทางลัด (Shortcut) บน Desktop"
-Write-Host "2. ตั้งเวลาเคลียร์อัตโนมัติ (Task Scheduler)"
-Write-Host "3. ยกเลิกการตั้งเวลาอัตโนมัติ"
-Write-Host "Q. ออกจากโปรแกรม"
-Write-Host "--------------------------------------"
-$choice = Read-Host "เลือกเมนู (1-3)"
+do {
+    Show-Menu
+    $choice = Read-Host "กรุณาเลือกตัวเลือก (1-4)"
 
-switch ($choice) {
-    "1" {
-        Download-EmptyStandbyList
-        
-        $desktopPath  = "$env:USERPROFILE\Desktop\ClearRAM.lnk"
-        $onedrivePath = "$env:USERPROFILE\OneDrive\Desktop\ClearRAM.lnk"
-        $targetPath   = "C:\Windows\System32\cmd.exe"
-        $arguments    = "/c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
+    switch ($choice) {
+        "1" {
+            if (Download-EmptyStandbyList) {
+                $Shell = New-Object -ComObject WScript.Shell
+                $TargetFile = "C:\Windows\System32\cmd.exe"
+                $Arguments = '/c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist'
+                $ShortcutName = "Clear Memory.lnk"
+                
+                $DesktopPaths = @(
+                    [System.IO.Path]::Combine($env:USERPROFILE, "Desktop", $ShortcutName),
+                    [System.IO.Path]::Combine($env:USERPROFILE, "OneDrive", "Desktop", $ShortcutName)
+                )
 
-        New-AdminShortcut $desktopPath  $targetPath $arguments
-        New-AdminShortcut $onedrivePath $targetPath $arguments
-        
-        Cleanup-TempFolder
-        Write-Host "เสร็จสิ้น!" -ForegroundColor Green
-    }
-    
-    "2" {
-        $minutes = Read-Host "ระบุจำนวนเวลาที่ต้องการเคลียร์ (หน่วยนาที)"
-        if ($minutes -as [int]) {
-            Download-EmptyStandbyList
-            
-            $taskName = "AutoCleanRAM"
-            $action = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
-            
-            # สั่งสร้าง Task ผ่าน schtasks
-            schtasks /create /tn "$taskName" /sc MINUTE /mo $minutes /rl HIGHEST /ru SYSTEM /tr "$action" /f
-            
-            Cleanup-TempFolder
-            Write-Host "ตั้งเวลาสำเร็จ! โปรแกรมจะทำงานทุกๆ $minutes นาที" -ForegroundColor Green
-        } else {
-            Write-Host "กรุณากรอกตัวเลขที่ถูกต้อง" -ForegroundColor Red
+                foreach ($Path in $DesktopPaths) {
+                    try {
+                        $Dir = Split-Path $Path
+                        if (Test-Path $Dir) {
+                            $Shortcut = $Shell.CreateShortcut($Path)
+                            $Shortcut.TargetPath = $TargetFile
+                            $Shortcut.Arguments = $Arguments
+                            $Shortcut.WorkingDirectory = "C:\Windows\System32"
+                            $Shortcut.IconLocation = "C:\Windows\System32\cmd.exe"
+                            $Shortcut.Description = "Clear Standby List and Working Sets"
+                            $Shortcut.Save()
+
+                            # Set 'Run as Administrator' flag in shortcut byte offset 21
+                            $bytes = [System.IO.File]::ReadAllBytes($Path)
+                            $bytes[21] = $bytes[21] -bor 0x20
+                            [System.IO.File]::WriteAllBytes($Path, $bytes)
+                            
+                            Write-Host "สร้างทางลัดสำเร็จที่: $Path" -ForegroundColor Green
+                        }
+                    }
+                    catch {
+                        Write-Warning "ไม่สามารถสร้างทางลัดที่ $Path ได้: $($_.Exception.Message)"
+                    }
+                }
+                Remove-TempFile
+                Write-Host "`nการดำเนินการเสร็จสิ้น" -ForegroundColor Cyan
+                pause
+            }
+        }
+
+        "2" {
+            $minutes = Read-Host "ระบุจำนวนเวลาที่ต้องการเคลียร์ (หน่วยนาที)"
+            if ($minutes -as [int]) {
+                if (Download-EmptyStandbyList) {
+                    Write-Host "กำลังตั้งเวลาทำงานทุกๆ $minutes นาที..." -ForegroundColor Yellow
+                    $taskCmd = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
+                    
+                    # Create Scheduled Task
+                    schtasks /create /tn "AutoCleanRAM" /sc MINUTE /mo $minutes /rl HIGHEST /ru SYSTEM /tr $taskCmd /f
+                    
+                    Write-Host "ตั้งเวลาสำเร็จ! ระบบจะเคลียร์ RAM ทุก $minutes นาทีในเบื้องหลัง" -ForegroundColor Green
+                    Remove-TempFile
+                    pause
+                }
+            } else {
+                Write-Host "รูปแบบเวลาไม่ถูกต้อง กรุณาใส่เฉพาะตัวเลข" -ForegroundColor Red
+                pause
+            }
+        }
+
+        "3" {
+            Write-Host "กำลังยกเลิกการตั้งเวลาอัตโนมัติ..." -ForegroundColor Yellow
+            schtasks /delete /tn "AutoCleanRAM" /f 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "ยกเลิกการตั้งเวลาสำเร็จ" -ForegroundColor Green
+            } else {
+                Write-Host "ไม่พบการตั้งเวลา AutoCleanRAM ในระบบ" -ForegroundColor Gray
+            }
+            pause
+        }
+
+        "4" {
+            exit
         }
     }
-    
-    "3" {
-        Write-Host "กำลังยกเลิกการตั้งเวลาอัตโนมัติ..." -ForegroundColor Cyan
-        schtasks /delete /tn "AutoCleanRAM" /f
-        Write-Host "ยกเลิกการตั้งเวลาสำเร็จ" -ForegroundColor Green
-    }
-    
-    "Q" {
-        exit
-    }
-    
-    default {
-        Write-Host "ตัวเลือกไม่ถูกต้อง" -ForegroundColor Red
-    }
-}
-
-Write-Host "`nกดปุ่มใดๆ เพื่อปิด..."
-pause
+} while ($choice -ne "4")
