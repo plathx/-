@@ -20,27 +20,52 @@ $downloadUrl = "https://is.gd/pURUxe"
 $zipPath = "$tempFolder\CleanRAM.zip"
 $system32Path = "C:\Windows\System32\EmptyStandbyList.exe"
 
-# ฟังก์ชันจัดการการดาวน์โหลดและเตรียมไฟล์ (ใช้ .NET ตามที่ระบุ)
+# ฟังก์ชันจัดการการดาวน์โหลดและเตรียมไฟล์ (ใช้ .NET และเพิ่มการตรวจสอบ)
 function Setup-Files {
     if (-not (Test-Path $tempFolder)) { New-Item -ItemType Directory -Path $tempFolder | Out-Null }
     
     Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Green
+    
+    # ใช้ WebClient ตามความต้องการเดิม แต่เพิ่ม User-Agent เพื่อป้องกันโดนบล็อก
     $webClient = New-Object System.Net.WebClient
+    $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+    
     try {
         $webClient.DownloadFile($downloadUrl, $zipPath)
+        
+        # ตรวจสอบว่าไฟล์ที่โหลดมามีขนาดเป็น 0 หรือไม่ (ป้องกันไฟล์เสีย)
+        if ((Get-Item $zipPath).Length -lt 1kb) {
+            throw "ไฟล์ที่ดาวน์โหลดมามีขนาดเล็กเกินไป อาจเกิดจากการเชื่อมต่อล้มเหลวหรือลิงก์เสีย"
+        }
     } catch {
         Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด: $_" -ForegroundColor Red
         return $false
     }
 
     Write-Host "กำลังแตกไฟล์..." -ForegroundColor Green
-    Expand-Archive -Path $zipPath -DestinationPath $tempFolder -Force
+    try {
+        # ลบโฟลเดอร์เก่าถ้ามีเพื่อป้องกันไฟล์ซ้ำ
+        $extractPath = "$tempFolder\Extracted"
+        if (Test-Path $extractPath) { Remove-Item $extractPath -Recurse -Force }
+        
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-    if (Test-Path "$tempFolder\EmptyStandbyList.exe") {
-        Move-Item -Path "$tempFolder\EmptyStandbyList.exe" -Destination "C:\Windows\System32\" -Force
-        return $true
-    } else {
-        Write-Host "ไม่พบไฟล์ EmptyStandbyList.exe ใน Zip" -ForegroundColor Red
+        # ค้นหาไฟล์ .exe ภายในโฟลเดอร์ที่แตกออกมา (รองรับกรณีโครงสร้าง Zip ซับซ้อน)
+        $exeFile = Get-ChildItem -Path $extractPath -Filter "EmptyStandbyList.exe" -Recurse | Select-Object -First 1
+        $lnkFile = Get-ChildItem -Path $extractPath -Filter "CleanRAM.lnk" -Recurse | Select-Object -First 1
+
+        if ($exeFile) {
+            Move-Item -Path $exeFile.FullName -Destination "C:\Windows\System32\" -Force
+            # เก็บตำแหน่งไฟล์ .lnk ไว้ใช้ใน Temp สำหรับ Choice 1
+            if ($lnkFile) { Copy-Item -Path $lnkFile.FullName -Destination "$tempFolder\CleanRAM.lnk" -Force }
+            return $true
+        } else {
+            Write-Host "ไม่พบไฟล์ EmptyStandbyList.exe หลังจากแตกไฟล์ Zip" -ForegroundColor Red
+            return $false
+        }
+    } catch {
+        Write-Host "เกิดข้อผิดพลาดในการแตกไฟล์: $_" -ForegroundColor Red
+        Write-Host "คำแนะนำ: ไฟล์ Zip อาจดาวน์โหลดมาไม่สมบูรณ์ หรือถูกบล็อกโดย Antivirus" -ForegroundColor Yellow
         return $false
     }
 }
@@ -61,15 +86,18 @@ switch ($choice) {
                 "$env:USERPROFILE\OneDrive\Desktop\CleanRAM.lnk"
             )
 
+            $successCount = 0
             foreach ($path in $desktopPaths) {
                 $dir = Split-Path $path
                 if (Test-Path $dir) {
                     if (Test-Path "$tempFolder\CleanRAM.lnk") {
                         Copy-Item -Path "$tempFolder\CleanRAM.lnk" -Destination $path -Force
                         Write-Host "สร้างทางลัดที่: $path" -ForegroundColor Cyan
+                        $successCount++
                     }
                 }
             }
+            if ($successCount -eq 0) { Write-Host "ไม่พบตำแหน่ง Desktop ที่เหมาะสมในการวางทางลัด" -ForegroundColor Yellow }
         }
         Clean-Up
     }
