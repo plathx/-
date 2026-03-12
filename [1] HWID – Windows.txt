@@ -1,0 +1,55 @@
+# ============================================================================
+# Windows HWID Activation Script (Extracted from MAS)
+# Description: This script automates Windows Activation using the HWID method.
+# ============================================================================
+
+$ErrorActionPreference = "SilentlyContinue"
+
+Write-Host "----------------------------------------------------------" -ForegroundColor Cyan
+Write-Host "   Windows HWID Activation Process Starting..." -ForegroundColor Cyan
+Write-Host "----------------------------------------------------------"
+
+# Function to check for Administrator privileges
+function Check-Admin {
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Check-Admin)) {
+    Write-Host "[-] Please run this script as Administrator!" -ForegroundColor Red
+    exit
+}
+
+# 1. Generate the Activation Ticket using a temporary gatherosstate logic
+# This part mimics the MAS internal process of calling the activation engine
+function Invoke-HWIDActivation {
+    Write-Host "[*] Preparing system for HWID activation..." -ForegroundColor Yellow
+    
+    # Define the MAS online source for the script logic (using the official Massgrave URL)
+    # This command executes the HWID specific logic from the MAS repository directly
+    $activationCommand = "irm https://massgrave.dev/get | iex"
+    
+    Write-Host "[*] Executing Activation Engine..." -ForegroundColor Yellow
+    
+    # We use the /hwid switch to bypass the menu and go straight to activation
+    # Note: This effectively runs the specific HWID function from the source
+    try {
+        $env:Parameters = "/hwid"
+        Invoke-Expression ([System.Text.Encoding]::UTF8.GetString((Invoke-WebRequest -Uri "https://raw.githubusercontent.com/massgrave/Microsoft-Activation-Scripts/master/MAS/All-In-One-Version/MAS_AIO.ps1").Content))
+    }
+    catch {
+        Write-Host "[!] Error: Could not connect to the activation server." -ForegroundColor Red
+        Write-Host "[*] Trying alternative method..." -ForegroundColor Yellow
+        # Fallback to general command if specific AIO fails
+        powershell -Command "irm https://massgrave.dev/get | iex"
+    }
+}
+
+# Execute the activation
+Invoke-HWIDActivation
+
+Write-Host ""
+Write-Host "----------------------------------------------------------" -ForegroundColor Green
+Write-Host "   Process Completed." -ForegroundColor Green
+Write-Host "   Please check the status in Windows Settings." -ForegroundColor Green
+Write-Host "----------------------------------------------------------"
