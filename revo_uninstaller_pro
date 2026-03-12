@@ -1,0 +1,53 @@
+# 1. สร้างโฟลเดอร์ C:\phwyverysad (ถ้ายังไม่มี)
+$workingDir = "C:\phwyverysad"
+if (!(Test-Path $workingDir)) {
+    New-Item -ItemType Directory -Path $workingDir | Out-Null
+}
+
+# กำหนดพาธไฟล์ zip
+$zipPath = Join-Path $workingDir "revo_uninstaller_pro.zip"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/revo_uninstaller_pro.zip"
+
+# 2. ดาวน์โหลดไฟล์โดยใช้ .NET WebClient
+Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Cyan
+try {
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $zipPath)
+} catch {
+    Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด: $($_.Exception.Message)" -ForegroundColor Red
+    exit
+}
+
+# 3. แตกไฟล์ zip
+Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
+$extractTemp = Join-Path $workingDir "temp_extract"
+Expand-Archive -Path $zipPath -DestinationPath $extractTemp -Force
+
+# 4. ย้ายไฟล์ INSTALL.cmd, RevoUninProSetup.exe และโฟลเดอร์ License ออกมาไว้ที่ C:\phwyverysad
+$itemsToMove = @("INSTALL.cmd", "RevoUninProSetup.exe", "License")
+foreach ($item in $itemsToMove) {
+    $sourcePath = Join-Path $extractTemp $item
+    if (Test-Path $sourcePath) {
+        Move-Item -Path $sourcePath -Destination $workingDir -Force
+    }
+}
+
+# 5. ลบไฟล์ zip และโฟลเดอร์ชั่วคราว
+Remove-Item -Path $zipPath -Force
+Remove-Item -Path $extractTemp -Recurse -Force
+
+# 6. รัน INSTALL.cmd และรอจนกว่าจะปิดตัวลง
+Write-Host "กำลังรัน INSTALL.cmd..." -ForegroundColor Yellow
+$installPath = Join-Path $workingDir "INSTALL.cmd"
+if (Test-Path $installPath) {
+    $process = Start-Process -FilePath $installPath -WorkingDirectory $workingDir -Wait -PassThru
+}
+
+# 7. ลบโฟลเดอร์ C:\phwyverysad
+Write-Host "กำลังทำความสะอาดไฟล์ชั่วคราว..." -ForegroundColor Cyan
+if (Test-Path $workingDir) {
+    # พยายามลบโฟลเดอร์ทำงานทั้งหมด
+    Remove-Item -Path $workingDir -Recurse -Force
+}
+
+Write-Host "ดำเนินการเสร็จสิ้น" -ForegroundColor Green
