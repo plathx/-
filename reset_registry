@@ -1,0 +1,79 @@
+# ==============================================================================
+# Script: Auto-Reset-Registry-Permissions.ps1
+# Description: ทำงานอัตโนมัติตามคลิป "Reset Windows Registry to Default Settings"
+# ==============================================================================
+
+# 1. ตรวจสอบสิทธิ์ Administrator (ป้องกันการรันโดยไม่มีสิทธิ์แอดมิน)
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "กรุณารัน PowerShell ด้วยสิทธิ์ Administrator (คลิกขวา -> Run as Administrator)"
+    Exit
+}
+
+Write-Host "===================================================" -ForegroundColor Cyan
+Write-Host "  Automated Windows Registry Permission Reset" -ForegroundColor Cyan
+Write-Host "===================================================" -ForegroundColor Cyan
+
+# บังคับใช้ TLS 1.2 เพื่อป้องกันปัญหาดาวน์โหลดไฟล์ไม่ได้ใน Windows บางรุ่น
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+$installDir = "${env:ProgramFiles(x86)}\Windows Resource Kits\Tools"
+$subinaclExe = "$installDir\subinacl.exe"
+# ใช้ลิงก์จาก Archive เนื่องจากทาง Microsoft เอาไฟล์ออกจากหน้าดาวน์โหลดหลักแล้ว
+$msiUrl = "https://web.archive.org/web/20190830080644/https://download.microsoft.com/download/1/7/d/17d82b72-bc6a-4dc8-bfaa-98b37b22b367/subinacl.msi"
+$msiPath = "$env:TEMP\subinacl.msi"
+
+# 2. ตรวจสอบว่ามี SubInACL หรือไม่ ถ้าไม่มีให้ดาวน์โหลดและติดตั้งแบบเงียบๆ (Silent Install)
+if (-not (Test-Path -Path $subinaclExe)) {
+    Write-Host "[1/4] กำลังดาวน์โหลดโปรแกรม SubInACL..." -ForegroundColor Yellow
+    try {
+        Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath -UseBasicParsing
+    } catch {
+        Write-Error "ไม่สามารถดาวน์โหลดไฟล์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต"
+        Exit
+    }
+
+    Write-Host "[2/4] กำลังติดตั้ง SubInACL ในเบื้องหลัง..." -ForegroundColor Yellow
+    $installProcess = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$msiPath`" /qn" -PassThru -Wait
+    if ($installProcess.ExitCode -ne 0) {
+        Write-Error "การติดตั้งล้มเหลว ลองรันใหม่อีกครั้ง"
+        Exit
+    }
+} else {
+    Write-Host "[1/4] ตรวจพบ SubInACL ในเครื่องแล้ว ข้ามการดาวน์โหลด..." -ForegroundColor Green
+    Write-Host "[2/4] ข้ามขั้นตอนการติดตั้ง..." -ForegroundColor Green
+}
+
+# 3. สร้างไฟล์ .bat ไว้ในโฟลเดอร์ตามในคลิป
+Write-Host "[3/4] กำลังสร้างไฟล์คำสั่ง Reset Registry..." -ForegroundColor Yellow
+if (-not (Test-Path -Path $installDir)) {
+    New-Item -ItemType Directory -Path $installDir | Out-Null
+}
+
+$batPath = "$installDir\reset_registry.bat"
+$batContent = @"
+@echo off
+cd /d "%~dp0"
+echo Resetting Registry Permissions...
+subinacl /subkeyreg HKEY_LOCAL_MACHINE /grant=administrators=f
+subinacl /subkeyreg HKEY_CURRENT_USER /grant=administrators=f
+subinacl /subkeyreg HKEY_CLASSES_ROOT /grant=administrators=f
+subinacl /subdirectories %SystemDrive% /grant=administrators=f
+subinacl /subkeyreg HKEY_LOCAL_MACHINE /grant=system=f
+subinacl /subkeyreg HKEY_CURRENT_USER /grant=system=f
+subinacl /subkeyreg HKEY_CLASSES_ROOT /grant=system=f
+subinacl /subdirectories %SystemDrive% /grant=system=f
+echo Done.
+"@
+
+Set-Content -Path $batPath -Value $batContent -Encoding Ascii
+
+# 4. สั่งรันไฟล์ .bat อัตโนมัติ
+Write-Host "[4/4] กำลังเริ่มกระบวนการรีเซ็ต (ขั้นตอนนี้จะใช้เวลา 20-30 นาทีตามในคลิป)..." -ForegroundColor Yellow
+Write-Host "      *** กรุณาอย่าปิดหน้าต่างนี้จนกว่าจะเสร็จสิ้น! ***" -ForegroundColor Red
+
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batPath`"" -Wait -NoNewWindow
+
+Write-Host ""
+Write-Host "===================================================" -ForegroundColor Cyan
+Write-Host "  กระบวนการเสร็จสมบูรณ์! กรุณารีสตาร์ทเครื่อง (Restart PC)" -ForegroundColor Green
+Write-Host "===================================================" -ForegroundColor Cyan
