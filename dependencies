@@ -71,7 +71,7 @@ function Download-And-Install {
         }
         Write-Host "[+] ติดตั้ง $fileName สำเร็จ`n" -ForegroundColor Green
     } catch {
-        # แก้ไขจุดที่ทำให้เกิด Parser Error โดยใช้ ${} และแยก String ออกจาก Variable
+        # แก้ไขจุดที่ทำให้เกิด Parser Error โดยใช้ ${} ครอบตัวแปรเพื่อแยกออกจากเครื่องหมาย :
         $errMsg = $_.Exception.Message
         Write-Host "[-] เกิดข้อผิดพลาดใน ${fileName}: ${errMsg}" -ForegroundColor Red
         Write-Host ""
