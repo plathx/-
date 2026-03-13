@@ -7,14 +7,6 @@
 # 1. ใส่โค้ด .cmd หรือ .bat ของคุณที่นี่
 $EmbeddedBatchCode = @'
 @echo off
-echo ====================================================
-echo  Running Embedded Batch Script via PowerShell IEX
-echo ====================================================
-echo.
-echo Current User: %username%
-echo Current Dir:  %cd%
-echo.
-@echo off
 setlocal EnableDelayedExpansion
 title OS Playbook Downloader
 color 0B
@@ -155,11 +147,6 @@ if exist "%LAST_FILE%" (
 )
 
 exit
-ipconfig | findstr /i "IPv4"
-
-echo.
-echo ====================================================
-pause
 '@
 
 # 2. ฟังก์ชันหลักสำหรับรันโค้ด
