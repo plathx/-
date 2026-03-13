@@ -1,0 +1,176 @@
+<#
+.SYNOPSIS
+Universal PowerShell Wrapper with Embedded Batch Content.
+This script embeds the original batch code directly within a PowerShell variable
+to ensure single-file execution without any modifications to the source logic.
+#>
+
+$EmbeddedBatchCode = @'
+@echo off
+setlocal EnableDelayedExpansion
+title OS Playbook Downloader
+color 0B
+
+:: Ensure the script runs in the directory where it's located
+cd /d "%~dp0"
+
+:: Fixed AME Beta Link
+set "AME_URL=https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
+set "AME_FILE=AME-Beta-v0.8.4.exe"
+
+:MainMenu
+cls
+echo ===================================================
+echo             OS PLAYBOOK DOWNLOADER
+echo ===================================================
+echo Please select what you want to download:
+echo.
+echo [1] AME Beta + AtlasOS + ReviOS
+echo [2] AtlasOS
+echo [3] ReviOS
+echo [4] AME Beta
+echo.
+echo ===================================================
+echo Press a number (1-4)...
+
+:: Use choice command for instant key press (no Enter required)
+choice /c 1234 /n
+set "main_choice=%errorlevel%"
+
+if "%main_choice%"=="1" goto SubMenu
+if "%main_choice%"=="2" goto SubMenu
+if "%main_choice%"=="3" goto SubMenu
+if "%main_choice%"=="4" goto DownloadAME
+goto MainMenu
+
+:SubMenu
+cls
+echo ===================================================
+echo              SELECT WINDOWS VERSION
+echo ===================================================
+echo [1] Windows 11 25H2
+echo [2] Windows 11 24H2
+echo [3] Windows 11 23H2 or older
+echo [4] Windows 10 22H2
+echo.
+echo ===================================================
+echo Press a number (1-4)...
+
+:: Use choice command for instant key press
+choice /c 1234 /n
+set "ver_choice=%errorlevel%"
+
+:: ReviOS link is the same for all versions
+set "REVI_URL=https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
+set "REVI_FILE=Revi-PB-25.10.apbx"
+
+if "%ver_choice%"=="1" (
+    set "ATLAS_URL=https://github.com/Atlas-OS/Atlas/releases/download/0.5.0-hotfix/AtlasPlaybook_v0.5.0-hotfix.apbx"
+    set "ATLAS_FILE=AtlasPlaybook_v0.5.0-hotfix.apbx"
+    goto ProcessDownload
+)
+if "%ver_choice%"=="2" (
+    set "ATLAS_URL=https://github.com/Atlas-OS/Atlas/releases/download/0.4.1/AtlasPlaybook_v0.4.1.apbx"
+    set "ATLAS_FILE=AtlasPlaybook_v0.4.1.apbx"
+    goto ProcessDownload
+)
+if "%ver_choice%"=="3" (
+    set "ATLAS_URL=https://github.com/Atlas-OS/Atlas/releases/download/0.4.0/AtlasPlaybook_v0.4.0.apbx"
+    set "ATLAS_FILE=AtlasPlaybook_v0.4.0.apbx"
+    goto ProcessDownload
+)
+if "%ver_choice%"=="4" (
+    set "ATLAS_URL=https://github.com/Atlas-OS/Atlas/releases/download/0.4.0/AtlasPlaybook_v0.4.0.apbx"
+    set "ATLAS_FILE=AtlasPlaybook_v0.4.0.apbx"
+    goto ProcessDownload
+)
+goto SubMenu
+
+:ProcessDownload
+cls
+echo ===================================================
+echo                 DOWNLOADING FILES
+echo ===================================================
+echo.
+
+if "%main_choice%"=="1" (
+    echo [Downloading AME Beta...]
+    curl -# -L -O "%AME_URL%"
+    echo.
+    echo [Downloading AtlasOS Playbook...]
+    curl -# -L -O "%ATLAS_URL%"
+    echo.
+    echo [Downloading ReviOS Playbook...]
+    curl -# -L -O "%REVI_URL%"
+    set "LAST_FILE=%REVI_FILE%"
+)
+
+if "%main_choice%"=="2" (
+    echo [Downloading AtlasOS Playbook...]
+    curl -# -L -O "%ATLAS_URL%"
+    set "LAST_FILE=%ATLAS_FILE%"
+)
+
+if "%main_choice%"=="3" (
+    echo [Downloading ReviOS Playbook...]
+    curl -# -L -O "%REVI_URL%"
+    set "LAST_FILE=%REVI_FILE%"
+)
+
+goto Done
+
+:DownloadAME
+cls
+echo ===================================================
+echo                 DOWNLOADING FILES
+echo ===================================================
+echo.
+echo [Downloading AME Beta...]
+curl -# -L -O "%AME_URL%"
+set "LAST_FILE=%AME_FILE%"
+goto Done
+
+:Done
+echo.
+echo ===================================================
+echo                 DOWNLOAD COMPLETED!
+echo ===================================================
+echo Files have been saved to the current folder.
+echo Press any key to open folder and exit...
+pause >nul
+
+:: Open explorer and highlight the last downloaded file
+if exist "%LAST_FILE%" (
+    explorer.exe /select,"%~dp0%LAST_FILE%"
+) else (
+    start .
+)
+
+exit
+'@
+
+if ([string]::IsNullOrWhiteSpace($EmbeddedBatchCode) -or $EmbeddedBatchCode -match "ลบบรรทัดนี้แล้ววางโค้ด Batch") {
+    Write-Host "ข้อผิดพลาด: คุณยังไม่ได้ใส่โค้ด Batch ลงในสคริปต์นี้" -ForegroundColor Red
+    exit
+}
+
+try {
+    $TempFilePath = Join-Path -Path $env:TEMP -ChildPath "Embedded_Exec_$(Get-Random).cmd"
+    
+    Set-Content -Path $TempFilePath -Value $EmbeddedBatchCode -Encoding Default
+
+    Write-Host "--- กำลังเริ่มการทำงาน (PowerShell Wrapper) ---" -ForegroundColor Cyan
+
+    $Process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$TempFilePath`"" -Wait -NoNewWindow -PassThru
+
+    Write-Host "การทำงานเสร็จสิ้น (Exit Code: $($Process.ExitCode))" -ForegroundColor Green
+}
+catch {
+    Write-Host "เกิดข้อผิดพลาด: $($_.Exception.Message)" -ForegroundColor Red
+}
+finally {
+    if (Test-Path -Path $TempFilePath) {
+        Remove-Item -Path $TempFilePath -Force
+    }
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
