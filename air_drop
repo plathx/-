@@ -1,0 +1,143 @@
+# --- การตั้งค่าเบื้องต้น ---
+$port = 8080 
+$localIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback|VirtualBox|VMware' }).IPAddress[0]
+if (-not $localIp) { $localIp = "127.0.0.1" }
+
+# --- ส่วนของการเลือกไฟล์ ---
+# ใช้ Thread เฉพาะเพื่อให้ GUI ทำงานได้แม้จะรันผ่าน iex
+Add-Type -AssemblyName System.Windows.Forms
+$fileBrowser = New-Object System.Windows.Forms.OpenFileDialog
+$fileBrowser.Multiselect = $true
+$fileBrowser.Title = "เลือกไฟล์ที่ต้องการแชร์ (ห้ามปิดหน้าต่างนี้จนกว่าจะเลิกแชร์)"
+
+# แสดงหน้าต่างเลือกไฟล์
+$result = $fileBrowser.ShowDialog()
+if ($result -ne "OK") { 
+    Write-Host "ยกเลิกการทำงาน" -ForegroundColor Yellow
+    return 
+}
+
+$sharedFiles = @{}
+foreach ($filePath in $fileBrowser.FileNames) {
+    $fileName = [System.IO.Path]::GetFileName($filePath)
+    $sharedFiles[$fileName] = $filePath
+}
+
+# --- เริ่มต้น Web Server (Local) ---
+$localUrl = "http://*:$($port)/"
+$listener = New-Object System.Net.HttpListener
+$listener.Prefixes.Add($localUrl)
+
+try {
+    $listener.Start()
+} catch {
+    Write-Host "เกิดข้อผิดพลาด: กรุณารัน PowerShell ในฐานะ Administrator" -ForegroundColor Red
+    return
+}
+
+# --- สร้าง Public URL ด้วย localhost.run ---
+Write-Host "`nกำลังเชื่อมต่อกับอินเทอร์เน็ตเพื่อสร้างลิงก์สาธารณะ..." -ForegroundColor Cyan
+# สร้างไฟล์ชั่วคราวสำหรับดึงข้อมูล Tunnel
+$tempTunnelFile = [System.IO.Path]::GetTempFileName()
+$tunnelProcess = Start-Process ssh -ArgumentList "-R 80:localhost:$port via@localhost.run" -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
+
+# รอให้ SSH สร้างลิงก์เสร็จ
+$timeout = 10
+while ($timeout -gt 0) {
+    $content = Get-Content $tempTunnelFile | Out-String
+    if ($content -match "https://[a-zA-Z0-9-.]+\.lhr\.life") {
+        $publicUrl = $matches[0]
+        break
+    }
+    Start-Sleep -Seconds 1
+    $timeout--
+}
+
+if (-not $publicUrl) {
+    Write-Host "ไม่สามารถสร้าง Public URL ได้ กรุณาตรวจสอบว่าเครื่องมี SSH (OpenSSH) และต่อเน็ตอยู่" -ForegroundColor Red
+    $listener.Stop()
+    return
+}
+
+# --- ย่อลิงก์ด้วย is.gd API ---
+Write-Host "กำลังย่อลิงก์ด้วย is.gd..." -ForegroundColor Cyan
+try {
+    $shortenApi = "https://is.gd/create.php?format=simple&url=$([System.Web.HttpUtility]::UrlEncode($publicUrl))"
+    $shortUrl = (Invoke-WebRequest -Uri $shortenApi -UseBasicParsing).Content.Trim()
+    $finalUrl = $shortUrl
+} catch {
+    $finalUrl = $publicUrl 
+}
+
+# --- คัดลอกลิงก์ลง Clipboard ---
+$finalUrl | Set-Clipboard
+$qrApiTerminal = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$([System.Web.HttpUtility]::UrlEncode($finalUrl))&format=ascii"
+
+# --- แสดงผลใน Console ---
+Clear-Host
+Write-Host "`n"
+Write-Host "  [ สแกน QR Code ด้านล่างเพื่อดาวน์โหลด ]" -ForegroundColor White -BackgroundColor Blue
+Write-Host "------------------------------------------------" -ForegroundColor Cyan
+
+try {
+    $asciiQR = (Invoke-WebRequest -Uri $qrApiTerminal -UseBasicParsing).Content
+    Write-Host $asciiQR -ForegroundColor Black -BackgroundColor White
+} catch {
+    Write-Host "[ ไม่สามารถแสดง QR Code ได้ ]" -ForegroundColor Red
+}
+
+Write-Host "------------------------------------------------" -ForegroundColor Cyan
+Write-Host " [สถานะ: ออนไลน์]" -ForegroundColor Green -NoNewline
+Write-Host " (คัดลอกลิงก์ลง Clipboard แล้ว!)" -ForegroundColor Magenta
+Write-Host " ลิงก์สาธารณะ: " -NoNewline
+Write-Host $finalUrl -ForegroundColor Yellow -BackgroundColor Black
+Write-Host "------------------------------------------------"
+Write-Host "ไฟล์ที่กำลังแชร์:"
+$sharedFiles.Keys | ForEach-Object { Write-Host " - $_" }
+Write-Host "`n(กด Ctrl+C เพื่อหยุดการแชร์ไฟล์)"
+
+# --- ลูปหลักสำหรับรับ Request ---
+try {
+    while ($listener.IsListening) {
+        $context = $listener.GetContext()
+        $request = $context.Request
+        $response = $context.Response
+        $path = $request.Url.LocalPath
+
+        if ($path -eq "/") {
+            $html = "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:sans-serif;text-align:center;background:#f0f2f5;padding:20px;}.card{background:white;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);display:inline-block;max-width:90%;}a{display:inline-block;margin-top:10px;background:#28a745;color:white;padding:12px 25px;text-decoration:none;border-radius:8px;font-weight:bold;}</style></head><body>"
+            $html += "<div class='card'><h1>ดาวน์โหลดไฟล์จากคอมพิวเตอร์</h1><p>กรุณาอย่าปิดหน้าต่างโปรแกรมขณะกำลังดาวน์โหลด</p><hr>"
+            foreach ($name in $sharedFiles.Keys) {
+                $html += "<h3>$name</h3>"
+                $html += "<a href='/download?file=$([System.Web.HttpUtility]::UrlEncode($name))'>กดเพื่อดาวน์โหลด</a><br><br><hr>"
+            }
+            $html += "</div></body></html>"
+            
+            $buffer = [System.Text.Encoding]::UTF8.GetBytes($html)
+            $response.ContentType = "text/html"
+            $response.ContentLength64 = $buffer.Length
+            $response.OutputStream.Write($buffer, 0, $buffer.Length)
+        }
+        elseif ($path -eq "/download") {
+            $fileName = $request.QueryString["file"]
+            if ($sharedFiles.ContainsKey($fileName)) {
+                $filePath = $sharedFiles[$fileName]
+                $fileStream = [System.IO.File]::OpenRead($filePath)
+                $response.ContentType = "application/octet-stream"
+                $response.AddHeader("Content-Disposition", "attachment; filename=`"$fileName`"")
+                $response.ContentLength64 = $fileStream.Length
+                
+                $buffer = New-Object byte[] 65536
+                while (($read = $fileStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                    $response.OutputStream.Write($buffer, 0, $read)
+                }
+                $fileStream.Close()
+            } else { $response.StatusCode = 404 }
+        }
+        $response.Close()
+    }
+} finally {
+    $listener.Stop()
+    if ($tunnelProcess) { Stop-Process -Id $tunnelProcess.Id -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $tempTunnelFile) { Remove-Item $tempTunnelFile -Force }
+}
