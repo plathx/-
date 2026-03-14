@@ -1,21 +1,21 @@
-# กำหนดเส้นทางโฟลเดอร์ทำงาน
+# กำหนดค่าพื้นฐาน
 $targetPath = "C:\phwyverysad"
 $zipFile = "$targetPath\avast_premium.zip"
 $url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/avast_premium.zip"
 
-# 1. เตรียมโฟลเดอร์
+# 1. สร้างโฟลเดอร์ทำงาน
 if (!(Test-Path $targetPath)) {
     New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
     Write-Host "Created directory: $targetPath" -ForegroundColor Cyan
 }
 
-# 2. ดาวน์โหลดไวที่สุดด้วย .NET (System.Net.WebClient)
-Write-Host "Downloading avast_premium.zip (High Speed)..." -ForegroundColor Yellow
+# 2. ดาวน์โหลดด้วย .NET (High Speed Method)
+Write-Host "Downloading with .NET... (Max Speed)" -ForegroundColor Yellow
 try {
     $webClient = New-Object System.Net.WebClient
-    # ใช้การดาวน์โหลดแบบปกติ (Synchronous) จะไวกว่าและเสถียรกว่าในสคริปต์อัตโนมัติ
+    # ใช้ DownloadFile ซึ่งไวกว่า Invoke-WebRequest เพราะโหลด Data ลง Disk โดยตรง
     $webClient.DownloadFile($url, $zipFile)
-    Write-Host "Download completed." -ForegroundColor Green
+    Write-Host "Download 100% Completed." -ForegroundColor Green
 } catch {
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit
@@ -23,11 +23,11 @@ try {
 
 # 3. แตกไฟล์
 if (Test-Path $zipFile) {
-    Write-Host "Extracting files..." -ForegroundColor Yellow
+    Write-Host "Extracting avast_premium.zip..." -ForegroundColor Yellow
     Expand-Archive -Path $zipFile -DestinationPath $targetPath -Force
 }
 
-# 4. จัดระเบียบไฟล์
+# 4. ย้ายไฟล์ออกมาที่ Root ของโฟลเดอร์ทำงาน
 $itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
 foreach ($itemName in $itemsToMove) {
     $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Select-Object -First 1
@@ -39,22 +39,21 @@ foreach ($itemName in $itemsToMove) {
     }
 }
 
-# 5. ลบไฟล์ zip
+# 5. ลบไฟล์ Zip
 if (Test-Path $zipFile) { Remove-Item -Path $zipFile -Force }
 
-# 6. รันการติดตั้ง
+# 6. รันตัวติดตั้ง
 $cmdPath = Join-Path $targetPath "INSTALL.cmd"
 if (Test-Path $cmdPath) {
-    Write-Host "Running INSTALL.cmd..." -ForegroundColor Magenta
-    # ใช้ /c เพื่อให้แน่ใจว่าทำงานใน context ของ cmd
+    Write-Host "Starting Installation..." -ForegroundColor Magenta
+    # รันผ่าน cmd.exe เพื่อความชัวร์
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$cmdPath`"" -WorkingDirectory $targetPath -Wait
-    Write-Host "Execution finished." -ForegroundColor Green
 }
 
-# 7. Cleanup
-Write-Host "Cleaning up..." -ForegroundColor Yellow
-Start-Sleep -Seconds 3
+# 7. ล้างเครื่อง (Cleanup)
+Write-Host "Cleaning up files..." -ForegroundColor Yellow
+Start-Sleep -Seconds 5 # รอให้ระบบปล่อยไฟล์ก่อนลบ
 if (Test-Path $targetPath) {
     Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
 }
-Write-Host "Process Done." -ForegroundColor Green
+Write-Host "All processes finished successfully." -ForegroundColor Green
