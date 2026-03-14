@@ -33,23 +33,21 @@ try {
     return
 }
 
-# --- สร้าง Public URL ด้วย localhost.run ---
+# --- สร้าง Public URL ด้วย serveo.net (ทางเลือกใหม่ที่เสถียรกว่า) ---
 Write-Host "`nกำลังเชื่อมต่อกับอินเทอร์เน็ตเพื่อสร้างลิงก์สาธารณะ..." -ForegroundColor Cyan
 $tempTunnelFile = [System.IO.Path]::GetTempFileName()
 
-# แก้ไข: เพิ่มออปชันเพื่อบังคับ Bypass ทุกการถาม (Yes/No) และข้ามการตรวจสอบ Fingerprint โดยสิ้นเชิง
-# -o StrictHostKeyChecking=no : ไม่ต้องถามยืนยัน key
-# -o UserKnownHostsFile=$null : ไม่ต้องใช้/ไม่ต้องบันทึกไฟล์ known_hosts (ใช้ $null หรือ /dev/null ตามแพลตฟอร์ม)
-# -o BatchMode=yes : ปิดการโต้ตอบทุกชนิด (ถ้ามี Error ให้เด้งออกเลย ไม่ต้องรอ input)
-$sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=$null -o BatchMode=yes -R 80:localhost:$port via@localhost.run"
+# ใช้ serveo.net แทน localhost.run เนื่องจากปัญหา publickey permission
+$sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=$null -o BatchMode=yes -R 80:localhost:$port serveo.net"
 $tunnelProcess = Start-Process ssh -ArgumentList $sshArgs -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
 
 # รอให้ SSH สร้างลิงก์เสร็จ
-$timeout = 15 
+$timeout = 20 
+$publicUrl = ""
 while ($timeout -gt 0) {
     if (Test-Path $tempTunnelFile) {
         $content = Get-Content $tempTunnelFile | Out-String
-        if ($content -match "https://[a-zA-Z0-9-.]+\.lhr\.life") {
+        if ($content -match "https://[a-zA-Z0-9-.]+\.serveo\.net") {
             $publicUrl = $matches[0]
             break
         }
@@ -60,7 +58,8 @@ while ($timeout -gt 0) {
 
 if (-not $publicUrl) {
     Write-Host "ไม่สามารถสร้าง Public URL ได้" -ForegroundColor Red
-    Write-Host "คำแนะนำ: ลองตรวจสอบว่าคอมพิวเตอร์ของคุณมีคำสั่ง 'ssh' หรือไม่โดยการพิมพ์ ssh ใน powershell ใหม่"
+    Write-Host "Log จาก SSH:"
+    if (Test-Path $tempTunnelFile) { Get-Content $tempTunnelFile | Select-Object -Last 5 }
     $listener.Stop()
     return
 }
