@@ -1,5 +1,6 @@
-# 1. บังคับใช้โปรโตคอลการเชื่อมต่อความเร็วสูง
+# 1. บังคับใช้ TLS 1.2 และตั้งค่าเร่งสปีด
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$progressPreference = 'SilentlyContinue'
 
 $targetPath = "C:\phwyverysad"
 $zipFile = "$targetPath\avast_premium.zip"
@@ -7,48 +8,52 @@ $url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%9
 
 if (!(Test-Path $targetPath)) { New-Item -ItemType Directory -Path $targetPath -Force | Out-Null }
 
-# 2. ปิด Progress Bar ชั่วคราวเพื่อเร่งสปีด (สำคัญมาก!)
-$progressPreference = 'SilentlyContinue'
-
-Write-Host "🚀 Downloading at Max Speed..." -ForegroundColor BrightWhite -BackgroundColor DarkBlue
+Write-Host "🚀 Downloading at Max Speed..." -ForegroundColor White -BackgroundColor DarkBlue
 
 try {
     $webClient = New-Object System.Net.WebClient
-    # ใช้ Proxy เดิมของระบบเพื่อความเร็ว
-    $webClient.Proxy = [System.Net.WebRequest]::DefaultWebProxy
-    $webClient.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
-    
-    # เริ่มดาวน์โหลด (Synchronous .NET Method)
     $webClient.DownloadFile($url, $zipFile)
 } catch {
     Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
     exit
 } finally {
-    # เปิด Progress Bar กลับมา
     $progressPreference = 'Continue'
 }
 
-Write-Host "✅ Download Finished!" -ForegroundColor Green
-
-# 3. ส่วนที่เหลือ (Extract & Install)
-Write-Host "📦 Extracting..." -ForegroundColor Yellow
-Expand-Archive -Path $zipFile -DestinationPath $targetPath -Force
-
-$itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
-foreach ($itemName in $itemsToMove) {
-    $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Select-Object -First 1
-    if ($sourceItem) { Move-Item -Path $sourceItem.FullName -Destination (Join-Path $targetPath $itemName) -Force }
+# 3. แตกไฟล์
+if (Test-Path $zipFile) {
+    Write-Host "📦 Extracting..." -ForegroundColor Yellow
+    Expand-Archive -Path $zipFile -DestinationPath $targetPath -Force
 }
 
+# 4. ย้ายไฟล์ออกมาที่ Root (ปรับปรุงใหม่เพื่อแก้ Error Move-Item)
+$itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
+foreach ($itemName in $itemsToMove) {
+    # ค้นหาไฟล์/โฟลเดอร์จากชั้นใน
+    $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Where-Object { $_.Parent.FullName -ne $targetPath } | Select-Object -First 1
+    
+    if ($sourceItem) {
+        $destPath = Join-Path $targetPath $itemName
+        # ย้ายเฉพาะเมื่อมันไม่ได้อยู่ที่ Root อยู่แล้ว
+        Write-Host "Moving $($sourceItem.Name) to root..." -ForegroundColor Gray
+        Move-Item -Path $sourceItem.FullName -Destination $destPath -Force
+    }
+}
+
+# 5. ลบไฟล์ Zip
 if (Test-Path $zipFile) { Remove-Item -Path $zipFile -Force }
 
+# 6. รันตัวติดตั้ง
 $cmdPath = Join-Path $targetPath "INSTALL.cmd"
 if (Test-Path $cmdPath) {
     Write-Host "🛠️ Running Install..." -ForegroundColor Magenta
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$cmdPath`"" -WorkingDirectory $targetPath -Wait
 }
 
+# 7. Cleanup
 Write-Host "🧹 Cleaning up..." -ForegroundColor Gray
-Start-Sleep -Seconds 2
-Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 3
+if (Test-Path $targetPath) {
+    Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+}
 Write-Host "✨ Done!" -ForegroundColor Green
