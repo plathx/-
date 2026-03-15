@@ -1,44 +1,40 @@
-# กำหนดรหัสตัวอักษรให้แสดงผลภาษาไทยได้ถูกต้องในบางเครื่อง
 [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
-# เก็บข้อมูลเมนูและคำสั่งทั้งหมด
 $menuItems = @{
     1  = @{ Name = "ล็อกไมค์ (Lock Mic)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic | iex" }
-    2  = @{ Name = "นำเข้าเกมสตรีม (Steam)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/import_games_steam | iex" }
+    2  = @{ Name = "เสกเกมสตรีม (Steam)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/import_games_steam | iex" }
     3  = @{ Name = "ติดตั้ง PowerPlan (KernelOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_powerplan | iex" }
     4  = @{ Name = "ติดตั้ง Spotify Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/spotify_premium | iex" }
     5  = @{ Name = "โหลด OS ทับ (Atlas/ReviOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/playbook_downloader | iex" }
     6  = @{ Name = "แปลงไฟล์ .py เป็น .exe"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/py_to_exe | iex" }
     7  = @{ Name = "ติดตั้ง Minecraft for Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/minecraft_for_windows | iex" }
-    8  = @{ Name = "ติดตั้ง Discord (รวมทุกรุ่น)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/rwm_discord | iex" }
-    9  = @{ Name = "ล้างแรม (Clean RAM)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram | iex" }
+    8  = @{ Name = "ติดตั้ง Discord (Discord Discord PTB Discord Canary)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/rwm_discord | iex" }
+    9  = @{ Name = "Clean Ram (คล้ายๆ RamMap แต่ใช้งานกว่า)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram | iex" }
     10 = @{ Name = "ปรับแต่ง Windows (WinUtil)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/winutil | iex" }
     11 = @{ Name = "สร้างลิ้งก์ดาวน์โหลดไฟล์"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/setup_share | iex" }
     12 = @{ Name = "สร้างจุดย้อนระบบ (Restore)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/system_restore | iex" }
     13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options | iex" }
     14 = @{ Name = "ติดตั้ง Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling | iex" }
-    15 = @{ Name = "ถอนแอป (Revo Uninstaller)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro | iex" }
+    15 = @{ Name = "ตัวช่วยถอนการติดตั้งแอพ (Revo Uninstaller)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro | iex" }
     16 = @{ Name = "จัดการไดรเวอร์ (Driver Easy)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/driver_easy_pro | iex" }
-    17 = @{ Name = "ติดตั้งส่วนเสริม (Dev Tools)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools | iex" }
+    17 = @{ Name = "ติดตั้งส่วนเสริม (รวมตัวช่วยติดตั้งส่วนเสริมจำเป็นสำหรับ Windows)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools | iex" }
     18 = @{ Name = "ย่อลิ้งก์ให้สั้น (Short Link)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/cut_link | iex" }
-    19 = @{ Name = "ติดตั้ง IDM (โหลดไวขึ้น)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build | iex" }
+    19 = @{ Name = "ติดตั้ง IDM (ตัวช่วยให้ดาวน์โหลดไฟล์ได้ไวขึ้นกว่าเดิมเยอะ)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build | iex" }
     20 = @{ Name = "เปิดใช้งาน Microsoft 365"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/activate_365 | iex" }
     21 = @{ Name = "เปิดใช้งาน Windows (แท้)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/activate_windowsall | iex" }
-    22 = @{ Name = "เปลี่ยนรุ่น Windows (Home>Pro)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/change_windows_edition | iex" }
+    22 = @{ Name = "เปลี่ยนรุ่น Windows (เช่น Home>Pro)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/change_windows_edition | iex" }
     23 = @{ Name = "เช็คสถานะ Activate Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/check_status_windows | iex" }
     24 = @{ Name = "ติดตั้ง Avast Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security | iex" }
     25 = @{ Name = "ติดตั้ง Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium | iex" }
 }
 
-# ฟังก์ชันแสดงเมนูแบบ 3 คอลัมน์
 function Show-Menu {
     Clear-Host
     Write-Host "==========================================================================================================" -ForegroundColor Cyan
-    Write-Host "                                         MULTI-TOOLBOX SCRIPT                                             " -ForegroundColor Yellow
+    Write-Host "                                         ALL IN ONE                                             " -ForegroundColor Yellow
     Write-Host "==========================================================================================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # วนลูปเพื่อแสดงผล 3 คอลัมน์ (1-10, 11-20, 21-30)
     for ($i = 1; $i -le 10; $i++) {
         $col1 = ""
         $col2 = ""
@@ -54,11 +50,9 @@ function Show-Menu {
             $col3 = "{0,2}. {1}" -f ($i + 20), $menuItems[$i + 20].Name 
         }
 
-        # คำนวณความยาวของตัวอักษรที่มองเห็นจริงๆ (ละเว้นสระบน-ล่าง และวรรณยุกต์ภาษาไทย ด้วย \p{M})
         $len1 = ($col1 -replace '\p{M}', '').Length
         $len2 = ($col2 -replace '\p{M}', '').Length
         
-        # จัดระยะห่างให้แต่ละคอลัมน์กว้าง 40 ตัวอักษร
         $str1 = $col1 + (" " * [Math]::Max(0, 40 - $len1))
         $str2 = $col2 + (" " * [Math]::Max(0, 40 - $len2))
         
@@ -68,21 +62,17 @@ function Show-Menu {
     Write-Host "==========================================================================================================" -ForegroundColor Cyan
 }
 
-# ลูปหลักของโปรแกรม
 while ($true) {
     Show-Menu
     
-    # รับค่าจากผู้ใช้
     $choice = Read-Host "[?] กรุณาพิมพ์หมายเลขที่ต้องการ (พิมพ์ 0 เพื่อออก)"
     
-    # เช็คเงื่อนไขการออก
     if ($choice -eq '0') {
         Write-Host "`n[!] ออกจากโปรแกรมเรียบร้อยแล้ว" -ForegroundColor Yellow
         Start-Sleep -Seconds 1
         break
     }
 
-    # แปลงเป็นตัวเลขและตรวจสอบว่ามีในเมนูหรือไม่
     $selected = $choice -as [int]
     
     if ($selected -and $menuItems.ContainsKey($selected)) {
@@ -90,7 +80,6 @@ while ($true) {
         Write-Host "`n[*] กำลังรัน: $($selectedItem.Name)..." -ForegroundColor Green
         
         try {
-            # รันคำสั่ง
             Invoke-Expression $selectedItem.Cmd
             Write-Host "`n[+] ทำรายการเสร็จสิ้น!" -ForegroundColor Green
         } catch {
