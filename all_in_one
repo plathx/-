@@ -33,9 +33,9 @@ $menuItems = @{
 # ฟังก์ชันแสดงเมนูแบบ 3 คอลัมน์
 function Show-Menu {
     Clear-Host
-    Write-Host "=========================================================================================" -ForegroundColor Cyan
-    Write-Host "                                 MULTI-TOOLBOX SCRIPT                                    " -ForegroundColor Yellow
-    Write-Host "=========================================================================================" -ForegroundColor Cyan
+    Write-Host "==========================================================================================================" -ForegroundColor Cyan
+    Write-Host "                                         MULTI-TOOLBOX SCRIPT                                             " -ForegroundColor Yellow
+    Write-Host "==========================================================================================================" -ForegroundColor Cyan
     Write-Host ""
 
     # วนลูปเพื่อแสดงผล 3 คอลัมน์ (1-10, 11-20, 21-30)
@@ -54,14 +54,18 @@ function Show-Menu {
             $col3 = "{0,2}. {1}" -f ($i + 20), $menuItems[$i + 20].Name 
         }
 
-        # จัดระยะห่างด้วย PadRight (ปรับให้เหมาะกับการแสดงผลฟอนต์ไทยในคอนโซล)
-        $str1 = $col1.PadRight(40, ' ')
-        $str2 = $col2.PadRight(40, ' ')
+        # คำนวณความยาวของตัวอักษรที่มองเห็นจริงๆ (ละเว้นสระบน-ล่าง และวรรณยุกต์ภาษาไทย ด้วย \p{M})
+        $len1 = ($col1 -replace '\p{M}', '').Length
+        $len2 = ($col2 -replace '\p{M}', '').Length
+        
+        # จัดระยะห่างให้แต่ละคอลัมน์กว้าง 40 ตัวอักษร
+        $str1 = $col1 + (" " * [Math]::Max(0, 40 - $len1))
+        $str2 = $col2 + (" " * [Math]::Max(0, 40 - $len2))
         
         Write-Host ("{0}{1}{2}" -f $str1, $str2, $col3)
     }
     Write-Host ""
-    Write-Host "=========================================================================================" -ForegroundColor Cyan
+    Write-Host "==========================================================================================================" -ForegroundColor Cyan
 }
 
 # ลูปหลักของโปรแกรม
