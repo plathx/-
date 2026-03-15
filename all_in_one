@@ -16,7 +16,7 @@ $menuItems = @{
     12 = @{ Name = "สร้างจุดย้อนระบบ (Restore)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/system_restore | iex" }
     13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options | iex" }
     14 = @{ Name = "ติดตั้ง Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling | iex" }
-    15 = @{ Name = "ตัวช่วยถอนการติดตั้งแอพ (Revo Uninstaller)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro | iex" }
+    15 = @{ Name = "ถอนการติดตั้งแอพ (Revo Uninstaller)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro | iex" }
     16 = @{ Name = "จัดการไดรเวอร์ (Driver Easy)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/driver_easy_pro | iex" }
     17 = @{ Name = "ติดตั้งส่วนเสริมจำเป็นสำหรับ Windows "; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools | iex" }
     18 = @{ Name = "ย่อลิ้งก์ให้สั้น (Short Link)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/cut_link | iex" }
