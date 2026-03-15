@@ -69,9 +69,10 @@ while ($true) {
     $choice = Read-Host "[?] กรุณาพิมพ์หมายเลขที่ต้องการ (พิมพ์ 0 เพื่อออก)"
     
     if ($choice -eq '0') {
-        Write-Host "`n[!] ออกจากโปรแกรมเรียบร้อยแล้ว" -ForegroundColor Yellow
+        Write-Host "`n[!] กำลังปิดหน้าต่าง" -ForegroundColor Yellow
         Start-Sleep -Seconds 1
-        break
+        Get-Process -Name powershell -ErrorAction SilentlyContinue | Stop-Process -Force
+        Stop-Process -Name WindowsTerminal -Force
     }
 
     $selected = $choice -as [int]
