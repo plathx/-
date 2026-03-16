@@ -1,31 +1,48 @@
 <#
 .SYNOPSIS
-    OS Playbook Downloader (Improved Version)
+    OS Playbook Downloader (High-Speed & TLS 1.2 Forced)
 #>
 
 $ErrorActionPreference = "Stop"
+# 1. ปิด Progress Bar เพื่อลดการใช้ทรัพยากร UI (ทำให้โหลดเร็วขึ้น)
+$ProgressPreference = 'SilentlyContinue'
 
-# ตรวจสอบว่ารันจากไฟล์หรือรันผ่าน Memory (iex)
+# 2. บังคับใช้ TLS 1.2 เพื่อความเสถียรในการเชื่อมต่อ HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# ตรวจสอบตำแหน่งที่รันสคริปต์
 if ($MyInvocation.MyCommand.Path) {
     $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 } else {
-    $ScriptDir = $PWD # ถ้าไม่มีไฟล์ ให้ใช้โฟลเดอร์ปัจจุบันที่เปิด PowerShell อยู่
+    $ScriptDir = $PWD
 }
 Set-Location $ScriptDir
 
 $AME_URL = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
 $REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
 
+# 3. ฟังก์ชันดาวน์โหลดโดยใช้ .NET WebClient (Synchronous)
 Function Download-File {
     param([string]$Url, [string]$Name)
-    if ($Url -eq $null -or $Url -eq "") { return } # กันเหนื่อยถ้า URL ว่าง
+    if ([string]::IsNullOrWhiteSpace($Url)) { return }
+    
     Write-Host ">>> Downloading: $Name..." -ForegroundColor Cyan
-    Invoke-WebRequest -Uri $Url -OutFile "$ScriptDir\$Name" -UseBasicParsing
+    try {
+        $storagePath = Join-Path $ScriptDir $Name
+        $WebClient = New-Object System.Net.WebClient
+        # ดาวน์โหลดแบบตรงไปตรงมา
+        $WebClient.DownloadFile($Url, $storagePath)
+        Write-Host " [OK] Done." -ForegroundColor Green
+    }
+    catch {
+        Write-Host " [ERROR] Failed to download $Name" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Gray
+    }
 }
 
 Clear-Host
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "             OS PLAYBOOK DOWNLOADER" -ForegroundColor Cyan
+Write-Host "       OS PLAYBOOK DOWNLOADER (FAST MODE)" -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "[1] AME Beta + AtlasOS + ReviOS"
 Write-Host "[2] AtlasOS"
@@ -37,7 +54,6 @@ $main_choice = Read-Host "Select an option (1-4)"
 $filesToDownload = @()
 
 if ($main_choice -match '^[1-4]$') {
-    # จัดการเลือก AtlasOS Version
     if ($main_choice -in @('1', '2')) {
         Clear-Host
         Write-Host "Select Windows Version for AtlasOS:" -ForegroundColor Yellow
@@ -61,7 +77,6 @@ if ($main_choice -match '^[1-4]$') {
         }
     }
 
-    # เพิ่มไฟล์เข้าคิวตามเงื่อนไข
     if ($main_choice -eq '1') {
         $filesToDownload += ,@($AME_URL, "AME-Beta-v0.8.4.exe")
         $filesToDownload += ,@($atlas[0], $atlas[1])
@@ -77,7 +92,6 @@ if ($main_choice -match '^[1-4]$') {
         $filesToDownload += ,@($AME_URL, "AME-Beta-v0.8.4.exe")
     }
 
-    # เริ่มดาวน์โหลด
     Clear-Host
     foreach ($file in $filesToDownload) {
         Download-File -Url $file[0] -Name $file[1]
@@ -85,7 +99,7 @@ if ($main_choice -match '^[1-4]$') {
 
     Write-Host "`n===================================================" -ForegroundColor Green
     Write-Host "                DOWNLOAD COMPLETED!" -ForegroundColor Green
-    Write-Host "  Files saved to: $ScriptDir"
+    Write-Host "   Files saved to: $ScriptDir"
     Write-Host "===================================================" -ForegroundColor Green
     explorer $ScriptDir
 }
