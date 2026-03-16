@@ -1,85 +1,73 @@
 <#
 .SYNOPSIS
-    High-Performance OS Playbook Downloader (Expert Edition)
-    Optimized for: Multi-threading, Low-latency Networking, and Direct I/O.
+    High-Performance OS Playbook Downloader (Fixed Thread-Safe Edition)
 #>
 
 $ErrorActionPreference = "Stop"
 
 # 1. Networking & Protocol Optimization
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
-$handler = New-Object System.Net.Http.SocketsHttpHandler
-$handler.PooledConnectionLifetime = New-TimeSpan -Minutes 5
-$handler.MaxConnectionsPerServer = 10
-$httpClient = New-Object System.Net.Http.HttpClient($handler)
 
-# 2-4. Implementation Logic (Execution, Memory, Storage)
-Function Start-HighSpeedDownload {
-    param(
-        [Parameter(Mandatory=$true)][string]$Url,
-        [Parameter(Mandatory=$true)][string]$FileName
-    )
+# กำหนด Path
+if ($MyInvocation.MyCommand.Path) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path } else { $ScriptDir = $PWD }
+Set-Location $ScriptDir
 
-    $DestPath = Join-Path $ScriptDir $FileName
-    Write-Host ">>> Initiating: $FileName" -ForegroundColor Cyan
-
+# นิยามขั้นตอนการดาวน์โหลดเป็น ScriptBlock เพื่อส่งเข้า Parallel Scope
+$DownloadEngine = {
+    param($Url, $FileName, $TargetDir)
+    
     try {
-        # Request Headers for Keep-Alive and Optimization
-        $request = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Get, $Url)
-        $responseTask = $httpClient.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead)
+        $DestPath = Join-Path $TargetDir $FileName
+        
+        # สร้าง HttpClient ภายในแต่ละ Thread (ดีที่สุดสำหรับ Parallel)
+        $handler = New-Object System.Net.Http.SocketsHttpHandler
+        $handler.PooledConnectionLifetime = New-TimeSpan -Minutes 2
+        $httpClient = New-Object System.Net.Http.HttpClient($handler)
+        
+        $responseTask = $httpClient.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead)
         $response = $responseTask.GetAwaiter().GetResult()
         $response.EnsureSuccessStatusCode() | Out-Null
 
         $totalBytes = $response.Content.Headers.ContentLength
         $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
 
-        # 4. Disk Space Pre-allocation
+        # 4. Storage Optimization: Pre-allocation
         $fileStream = New-Object System.IO.FileStream($DestPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, [System.IO.FileOptions]::Asynchronous)
-        if ($totalBytes) {
-            $fileStream.SetLength($totalBytes) # Pre-allocate disk space
-        }
+        if ($totalBytes) { $fileStream.SetLength($totalBytes) }
 
-        # 3. Optimized Buffer Stream (1MB)
-        $buffer = New-Object byte[] 1048576 # 1MB Buffer
-        $count = 0
+        # 3. Memory Optimization: 1MB Buffer Zero-Copy style
+        $buffer = New-Object byte[] 1048576 
         while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
             $fileStream.Write($buffer, 0, $count)
         }
 
-        $fileStream.Flush()
-        $fileStream.Dispose()
-        $sourceStream.Dispose()
-        
-        Write-Host " [SUCCESS] $FileName" -ForegroundColor Green
+        $fileStream.Flush(); $fileStream.Dispose(); $sourceStream.Dispose(); $httpClient.Dispose()
+        Write-Host " [OK] Downloaded: $FileName" -ForegroundColor Green
     }
     catch {
-        Write-Host " [FAILED] $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host " [ERROR] $FileName : $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
 # --- UI & Selection Logic ---
-if ($MyInvocation.MyCommand.Path) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path } else { $ScriptDir = $PWD }
-Set-Location $ScriptDir
-
 $AME_URL = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
 $REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
 
 Clear-Host
-Write-Host "===================================================" -ForegroundColor Magenta
-Write-Host "       CORE-OPTIMIZED PLAYBOOK DOWNLOADER"         -ForegroundColor Magenta
-Write-Host "===================================================" -ForegroundColor Magenta
+Write-Host "===================================================" -ForegroundColor Cyan
+Write-Host "       CORE-OPTIMIZED PLAYBOOK DOWNLOADER"         -ForegroundColor Cyan
+Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "[1] Full Suite (AME + Atlas + Revi)"
 Write-Host "[2] AtlasOS"
 Write-Host "[3] ReviOS"
 Write-Host "[4] AME Beta"
 Write-Host "---------------------------------------------------"
-$choice = Read-Host "Enter Selection"
+$choice = Read-Host "Select Option"
 
 $queue = New-Object System.Collections.Generic.List[PSCustomObject]
 
-# Mapping Atlas versions
 if ($choice -in '1','2') {
-    Write-Host "`nSelect AtlasOS Version:`n[1] 24H2/25H2  [2] 23H2  [3] Win10 22H2" -ForegroundColor Yellow
+    Write-Host "`nSelect AtlasOS Version:`n[1] 24H2/25H2 [2] 23H2 [3] Win10 22H2" -ForegroundColor Yellow
     $v = Read-Host "Ver"
     $atlas = switch($v){
         "1" {@("https://github.com/Atlas-OS/Atlas/releases/download/0.5.0-hotfix/AtlasPlaybook_v0.5.0-hotfix.apbx", "AtlasPlaybook_v0.5.0.apbx")}
@@ -88,19 +76,19 @@ if ($choice -in '1','2') {
     }
 }
 
-# Queue building
 if ($choice -eq '1' -or $choice -eq '4') { $queue.Add([PSCustomObject]@{Url=$AME_URL; Name="AME-v0.8.4.exe"}) }
 if ($choice -eq '1' -or $choice -eq '2') { if($atlas){ $queue.Add([PSCustomObject]@{Url=$atlas[0]; Name=$atlas[1]}) } }
 if ($choice -eq '1' -or $choice -eq '3') { $queue.Add([PSCustomObject]@{Url=$REVI_URL; Name="Revi-PB-25.10.apbx"}) }
 
-# Execute Multi-threaded Parallelism
+# 2. Execution & Concurrency: Multi-threaded Runspaces
 Clear-Host
-Write-Host ">>> Starting Parallel Execution Stage..." -ForegroundColor Yellow
+Write-Host ">>> Starting High-Concurrency Downloads...`n" -ForegroundColor Magenta
 $queue | ForEach-Object -Parallel {
-    # ปรับจูน Scope ภายใน Parallel
-    $using:Action = { Start-HighSpeedDownload -Url $args[0] -FileName $args[1] }
-    &$using:Action $PSItem.Url $PSItem.Name
+    # ส่งตัวแปรเข้าไปใน Thread ผ่าน ArgumentList
+    Invoke-Command -ScriptBlock ($using:DownloadEngine) -ArgumentList $_.Url, $_.Name, ($using:ScriptDir)
 } -ThrottleLimit 4
 
-Write-Host "`nAll operations completed. Resources released." -ForegroundColor Green
+Write-Host "`n===================================================" -ForegroundColor Cyan
+Write-Host "            ALL OPERATIONS COMPLETED"               -ForegroundColor Cyan
+Write-Host "===================================================" -ForegroundColor Cyan
 explorer $ScriptDir
