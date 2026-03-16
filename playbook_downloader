@@ -1,36 +1,71 @@
 <#
 .SYNOPSIS
-    OS Playbook Downloader (High-Performance Engine)
-    Optimized for Parallel Execution & Direct I/O
+    High-Performance Playbook Downloader (PS 5.1 Compatibility Mode)
+    Optimized for: .NET HttpClient, 1MB Stream Buffering, and Disk Pre-allocation.
 #>
 
 $ErrorActionPreference = "Stop"
 
-# 1. Networking Optimization
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+# 1. Networking & Protocol Optimization
+# บังคับใช้ TLS 1.2 (PS 5.1 มักจะใช้ TLS 1.1 เป็นค่าเริ่มต้น ซึ่ง GitHub ไม่รองรับแล้ว)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Determine Directory (Supporting IEX)
+# ตรวจสอบ Path (รองรับการรันผ่าน iex)
 $TargetDir = if ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $PWD }
 
-# Configuration
-$AME_URL  = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
-$REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
+# Function ดาวน์โหลดระดับ Low-level เพื่อรีดประสิทธิภาพสูงสุดบน PS 5.1
+Function Start-HighSpeedDownload {
+    param([string]$Url, [string]$FileName)
+    
+    $Dest = Join-Path $TargetDir $FileName
+    Write-Host ">>> Initiating: $FileName" -ForegroundColor Cyan
 
+    try {
+        # 3. Memory & Stream Management: ใช้ HttpClient แทน WebClient (เร็วกว่าและเสถียรกว่า)
+        $client = New-Object System.Net.Http.HttpClient
+        $responseTask = $client.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead)
+        $response = $responseTask.GetAwaiter().GetResult()
+        
+        $totalBytes = $response.Content.Headers.ContentLength
+        $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+
+        # 4. Storage Optimization: จองพื้นที่บน Disk ทันทีเพื่อลด Fragmentation
+        $fileStream = New-Object System.IO.FileStream($Dest, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, $true)
+        if ($totalBytes) { 
+            $fileStream.SetLength($totalBytes) 
+        }
+
+        # Optimized Buffer Tuning (1MB)
+        $buffer = New-Object byte[] 1048576
+        while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $fileStream.Write($buffer, 0, $count)
+        }
+
+        $fileStream.Flush()
+        $fileStream.Dispose()
+        $sourceStream.Dispose()
+        $client.Dispose()
+        
+        Write-Host " [SUCCESS] $FileName" -ForegroundColor Green
+    } catch {
+        Write-Host " [FAILED] $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+# --- UI Logic ---
 Clear-Host
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "       CORE-OPTIMIZED PLAYBOOK DOWNLOADER"         -ForegroundColor Cyan
+Write-Host "       CORE-OPTIMIZED DOWNLOADER (PS 5.1)"         -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "[1] Full Suite (AME + Atlas + Revi)"
-Write-Host "[2] AtlasOS"
-Write-Host "[3] ReviOS"
-Write-Host "[4] AME Beta"
+Write-Host "[1] Full Suite  [2] AtlasOS  [3] ReviOS  [4] AME"
 Write-Host "---------------------------------------------------"
 $choice = Read-Host "Select Option"
 
-$queue = New-Object System.Collections.Generic.List[PSCustomObject]
+$AME_URL  = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
+$REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
 
 if ($choice -in '1','2') {
-    Write-Host "`nSelect AtlasOS Version:`n[1] 24H2/25H2  [2] 23H2  [3] Win10 22H2" -ForegroundColor Yellow
+    Write-Host "`nSelect AtlasOS Version:`n[1] 24H2/25H2 [2] 23H2 [3] Win10 22H2" -ForegroundColor Yellow
     $v = Read-Host "Ver"
     $atlas = switch($v){
         "1" {@("https://github.com/Atlas-OS/Atlas/releases/download/0.5.0-hotfix/AtlasPlaybook_v0.5.0-hotfix.apbx", "AtlasPlaybook_v0.5.0.apbx")}
@@ -39,45 +74,10 @@ if ($choice -in '1','2') {
     }
 }
 
-if ($choice -eq '1' -or $choice -eq '4') { $queue.Add([PSCustomObject]@{Url=$AME_URL; Name="AME-v0.8.4.exe"}) }
-if ($choice -eq '1' -or $choice -eq '2') { if($atlas){ $queue.Add([PSCustomObject]@{Url=$atlas[0]; Name=$atlas[1]}) } }
-if ($choice -eq '1' -or $choice -eq '3') { $queue.Add([PSCustomObject]@{Url=$REVI_URL; Name="Revi-PB-25.10.apbx"}) }
+# เริ่มการทำงาน (Sequential แต่ความเร็ว Stream สูงสุด)
+if ($choice -eq '1' -or $choice -eq '4') { Start-HighSpeedDownload $AME_URL "AME-v0.8.4.exe" }
+if ($choice -eq '1' -or $choice -eq '2') { if($atlas){ Start-HighSpeedDownload $atlas[0] $atlas[1] } }
+if ($choice -eq '1' -or $choice -eq '3') { Start-HighSpeedDownload $REVI_URL "Revi-PB-25.10.apbx" }
 
-# 2. Execution & Concurrency Model (Multi-threaded)
-Clear-Host
-Write-Host ">>> Initiating Parallelized Download Engine...`n" -ForegroundColor Magenta
-
-$queue | ForEach-Object -Parallel {
-    $item = $_
-    $dest = Join-Path ($using:TargetDir) $item.Name
-    
-    try {
-        # 3. HttpClient Factory & Stream Management
-        $handler = New-Object System.Net.Http.SocketsHttpHandler
-        $handler.PooledConnectionLifetime = New-TimeSpan -Minutes 2
-        $client = New-Object System.Net.Http.HttpClient($handler)
-        
-        $response = $client.GetAsync($item.Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
-        $totalBytes = $response.Content.Headers.ContentLength
-        $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-
-        # 4. Storage Optimization: Pre-allocation
-        $fileStream = New-Object System.IO.FileStream($dest, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, $true)
-        if ($totalBytes) { $fileStream.SetLength($totalBytes) }
-
-        # Zero-Copy inspired Memory Streaming (1MB Buffer)
-        $buffer = New-Object byte[] 1048576
-        while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-            $fileStream.Write($buffer, 0, $count)
-        }
-
-        $fileStream.Flush(); $fileStream.Dispose(); $sourceStream.Dispose(); $client.Dispose()
-        Write-Host " [DONE] $($item.Name)" -ForegroundColor Green
-    }
-    catch {
-        Write-Host " [FAIL] $($item.Name) : $($_.Exception.Message)" -ForegroundColor Red
-    }
-} -ThrottleLimit 4
-
-Write-Host "`nAll downloads finalized in: $TargetDir" -ForegroundColor Cyan
+Write-Host "`nAll operations finished. Explorer opening..." -ForegroundColor Green
 explorer $TargetDir
