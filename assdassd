@@ -11,7 +11,7 @@ $filePath = $FileBrowser.FileName
 if (-not $filePath) { Write-Host "[-] ไม่ได้เลือกไฟล์" -ForegroundColor Yellow; exit }
 
 # --- ใส่ API Key ของคุณที่นี่ ---
-$apiKey = "YOUR_API_KEY_HERE"
+$apiKey = "2a359ba5f1ce8ff799adabc8903416c1b6bc9c4bc35a88dfae1e24c2061fd7fd"
 
 # รายการคำต้องห้ามของคุณ
 $blacklist = @("Xworm", "Backdoor", "Dropper", "AsyncRAT", "Njrat", "Stealer", "Spy", "Pyinstaller", "Python", "Expiro", "Rat")
