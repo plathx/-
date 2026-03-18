@@ -57,7 +57,7 @@ if (Test-Path $targetPath) {
 $activate = Read-Host "Do you want to activate Microsoft 365 now? (y/n)"
 if ($activate -eq "y" -or $activate -eq "Y") {
     Write-Host "Activating Microsoft 365..." -ForegroundColor Cyan
-    irm is.gd/activate_365 | iex
+    irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/activate_365.ps1 | iex
 } else {
     Write-Host "Skipping activation." -ForegroundColor Gray
 }

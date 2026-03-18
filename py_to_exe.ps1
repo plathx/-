@@ -1,8 +1,3 @@
-# ==============================================================================
-# Script: Automated Environment Setup for auto-py-to-exe
-# Description: Checks and installs Git, Python, and auto-py-to-exe silently.
-# ==============================================================================
-
 $ErrorActionPreference = "Stop"
 
 function Write-Info { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
@@ -14,7 +9,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Success "ตรวจพบ Git ในเครื่องแล้ว"
 } else {
     Write-Warning-Custom "ไม่พบ Git กำลังดำเนินการติดตั้งแบบ Silent..."
-    # ติดตั้ง Git ผ่าน Winget (--silent --accept-package-agreements --accept-source-agreements)
+    
     winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
     Write-Success "ติดตั้ง Git เรียบร้อยแล้ว (อาจต้องรีสตาร์ท PowerShell เพื่ออัปเดต Path)"
 }
