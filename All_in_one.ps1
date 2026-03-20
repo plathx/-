@@ -26,6 +26,8 @@ $menuItems = @{
     23 = @{ Name = "เช็คสถานะ Activate"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/check_status_windows.ps1 | iex" }
     24 = @{ Name = "ติดตั้ง Avast Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex" }
     25 = @{ Name = "ติดตั้ง Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
+    26 = @{ Name = "ติดตั้ง Browser"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/browser.ps1 | iex" }
+    26 = @{ Name = "ติดตั้ง X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button _Control.ps1 | iex" }
 }
 
 function Show-Menu {
