@@ -16,7 +16,7 @@ $menuItems = @{
     13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options.ps1 | iex" }
     14 = @{ Name = "ติดตั้ง Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex" }
     15 = @{ Name = "ติดตั้ง Revo Uninstaller Pro"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex" }
-    16 = @{ Name = "จัดการไดรเวอร์ (Driver Easy)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/driver_easy_pro.ps1 | iex" }
+    16 = @{ Name = "จัดการไดรเวอร์ (IObit Driver Pro)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/IObit_Driver_Booster_Pro.ps1 | iex" }
     17 = @{ Name = "ติดตั้งส่วนเสริม Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools.ps1 | iex" }
     18 = @{ Name = "ย่อลิ้งก์ให้สั้น (Short Link)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/cut_link.ps1 | iex" }
     19 = @{ Name = "ติดตั้ง IDM (โหลดไว)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build.ps1 | iex" }
@@ -27,7 +27,7 @@ $menuItems = @{
     24 = @{ Name = "ติดตั้ง Avast Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex" }
     25 = @{ Name = "ติดตั้ง Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
     26 = @{ Name = "ติดตั้ง Browser"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/browser.ps1 | iex" }
-    26 = @{ Name = "ติดตั้ง X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button _Control.ps1 | iex" }
+    27 = @{ Name = "ติดตั้ง X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button _Control.ps1 | iex" }
 }
 
 function Show-Menu {
