@@ -1,143 +1,105 @@
-# 1. ตรวจสอบเวอร์ชัน Microsoft 365 / Office
-$officeReg = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration" -ErrorAction SilentlyContinue
-$currentVer = $officeReg.VersionToReport
-$skipToActivate = $false
+[console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
-Write-Host "=== Microsoft 365 Management Tool ===" -ForegroundColor White -BackgroundColor Blue
+$menuItems = @{
+    1  = @{ Name = "ล็อกไมค์ (Lock Mic)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic.ps1 | iex" }
+    2  = @{ Name = "เสกเกมสตรีม (Steam)"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/add_games_steam.ps1 | iex" }
+    3  = @{ Name = "PowerPlan (KernelOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_powerplan.ps1 | iex" }
+    4  = @{ Name = "Spotify Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/spotify_premium.ps1 | iex" }
+    5  = @{ Name = "โหลด OS ทับ (Atlas/ReviOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/playbook_downloader.ps1 | iex" }
+    6  = @{ Name = "แปลงไฟล์ .py เป็น .exe"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/py_to_exe.ps1 | iex" }
+    7  = @{ Name = "Minecraft for Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/minecraft_for_windows.ps1 | iex" }
+    8  = @{ Name = "Discord 3 ตัว"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/rwm_discord.ps1 | iex" }
+    9  = @{ Name = "Clean Ram"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex" }
+    10 = @{ Name = "ปรับแต่ง Windows (WinUtil)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/winutil.ps1 | iex" }
+    11 = @{ Name = "สร้างลิ้งก์ดาวน์โหลดไฟล์"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/setup_share.ps1 | iex" }
+    12 = @{ Name = "สร้างจุดย้อนระบบ (Restore)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/system_restore.ps1 | iex" }
+    13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options.ps1 | iex" }
+    14 = @{ Name = "Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex" }
+    15 = @{ Name = "Revo Uninstaller Pro"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex" }
+    16 = @{ Name = "จัดการไดรเวอร์ (IObit Driver Pro)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/IObit_Driver_Booster_Pro.ps1 | iex" }
+    17 = @{ Name = "ติดตั้งส่วนเสริม Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools.ps1 | iex" }
+    18 = @{ Name = "ย่อลิ้งก์ให้สั้น (Short Link)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/cut_link.ps1 | iex" }
+    19 = @{ Name = "IDM (โหลดไว)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build.ps1 | iex" }
+    20 = @{ Name = "ดาวน์โหลด/เปิดใช้งาน Microsoft 365"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/activate_365.ps1 | iex" }
+    21 = @{ Name = "เปิดใช้งาน Windows (แท้)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/activate_windowsall.ps1 | iex" }
+    22 = @{ Name = "เปลี่ยนรุ่น Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/change_windows_edition.ps1 | iex" }
+    23 = @{ Name = "เช็คสถานะ Activate"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/check_status_windows.ps1 | iex" }
+    24 = @{ Name = "Avast Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex" }
+    25 = @{ Name = "Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
+    26 = @{ Name = "Browser"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/browser.ps1 | iex" }
+    27 = @{ Name = "X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button _Control.ps1 | iex" }
+    28 = @{ Name = "MiniTool Partition Wizard Pro"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/MiniTool_Partition_Wizard_Pro.ps1 | iex" }
+}  
 
-if ($null -ne $currentVer) {
-    Write-Host "`n[!] พบ Microsoft 365 ติดตั้งอยู่แล้ว (เวอร์ชัน: $currentVer)" -ForegroundColor Cyan
-    Write-Host "1. อัปเกรดเป็นรุ่นล่าสุด (ดาวน์โหลดและติดตั้งใหม่)"
-    Write-Host "2. ข้ามไปขั้นตอนการเปิดใช้งาน (Activate) เลย"
-    $opt = Read-Host "กรุณาเลือก (1/2)"
-    if ($opt -eq "2") { $skipToActivate = $true }
-}
+function Show-Menu {
+    Clear-Host
+    Write-Host "  __________________________________________________________________________________________________________________" -ForegroundColor DarkGray
+    Write-Host " /                                                                                                                  \" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "    █████╗ ██╗     ██╗      ██╗███╗   ██╗     ██████╗ ███╗   ██╗███████╗                                   " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "   ██╔══██╗██║     ██║      ██║████╗  ██║    ██╔═══██╗████╗  ██║██╔════╝                                   " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "   ███████║██║     ██║      ██║██╔██╗ ██║    ██║   ██║██╔██╗ ██║█████╗                                     " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "   ██╔══██║██║     ██║      ██║██║╚██╗██║    ██║   ██║██║╚██╗██║██╔══╝                                     " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "   ██║  ██║███████╗███████╗ ██║██║ ╚████║    ╚██████╔╝██║ ╚████║███████╗                                   " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " |" -NoNewline -ForegroundColor DarkGray; Write-Host "   ╚═╝  ╚═╝╚══════╝╚══════╝ ╚═╝╚═╝  ╚═══╝     ╚═════╝ ╚═╝  ╚═══╝╚══════╝                                   " -ForegroundColor Cyan -NoNewline; Write-Host " |" -ForegroundColor DarkGray
+    Write-Host " \__________________________________________________________________________________________________________________/" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "   [ VERSION 2.0 ] - POWERED BY PLATHX" -ForegroundColor DarkYellow
+    Write-Host "   ------------------------------------------------------------------------------------------------------------------" -ForegroundColor DarkGray
 
-# ---------------------------------------------------------
-# ส่วนการดาวน์โหลดและติดตั้ง (รันเมื่อเลือก 1 หรือยังไม่มี Office)
-# ---------------------------------------------------------
-if (-not $skipToActivate) {
-    $p = "C:\phwyverysad"
-    if (!(Test-Path $p)) { New-Item $p -Type Directory | Out-Null }
-    
-    # เพิ่ม Exclusion ทันที
-    Write-Host "Adding $p to Windows Defender Exclusions..." -ForegroundColor Gray
-    Add-MpPreference -ExclusionPath $p -EA 0
-    
-    # ตั้งค่า Network TLS 1.2 และปิด Progress Bar เพื่อความเร็วสูงสุด
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $oldP = $ProgressPreference
-    $ProgressPreference = 'SilentlyContinue'
-
-    # รายชื่อภาษาทั้งหมด (ไทย-อังกฤษ อยู่บนสุด)
-    $langs = @(
-        @{n="Thai [th-TH]"; c="th-th"},
-        @{n="English [en-US]"; c="en-us"},
-        @{n="Arabic [ar-SA]"; c="ar-sa"},
-        @{n="Bulgarian [bg-BG]"; c="bg-bg"},
-        @{n="Chinese (Simplified) [zh-CN]"; c="zh-cn"},
-        @{n="Chinese (Taiwan) [zh-TW]"; c="zh-tw"},
-        @{n="Croatian [hr-HR]"; c="hr-hr"},
-        @{n="Czech [cs-CZ]"; c="cs-cz"},
-        @{n="Danish [da-DK]"; c="da-dk"},
-        @{n="Dutch [nl-NL]"; c="nl-nl"},
-        @{n="Estonian [et-EE]"; c="et-ee"},
-        @{n="Finnish [fi-FI]"; c="fi-fi"},
-        @{n="French [fr-FR]"; c="fr-fr"},
-        @{n="German [de-DE]"; c="de-de"},
-        @{n="Greek [el-GR]"; c="el-gr"},
-        @{n="Hebrew [he-IL]"; c="he-il"},
-        @{n="Hindi [hi-IN]"; c="hi-in"},
-        @{n="Hungarian [hu-HU]"; c="hu-hu"},
-        @{n="Indonesian [id-ID]"; c="id-id"},
-        @{n="Italian [it-IT]"; c="it-it"},
-        @{n="Japanese [ja-JP]"; c="ja-jp"},
-        @{n="Kazakh [kk-KZ]"; c="kk-kz"},
-        @{n="Korean [ko-KR]"; c="ko-kr"},
-        @{n="Latvian [lv-LV]"; c="lv-lv"},
-        @{n="Lithuanian [lt-LT]"; c="lt-lt"},
-        @{n="Malay [ms-MY]"; c="ms-my"},
-        @{n="Norwegian [nb-NO]"; c="nb-no"},
-        @{n="Polish [pl-PL]"; c="pl-pl"},
-        @{n="Portuguese (Brazil) [pt-BR]"; c="pt-br"},
-        @{n="Portuguese (Portugal) [pt-PT]"; c="pt-pt"},
-        @{n="Romanian [ro-RO]"; c="ro-ro"},
-        @{n="Russian [ru-RU]"; c="ru-ru"},
-        @{n="Serbian (Latin) [sr-Latn-RS]"; c="sr-latn-rs"},
-        @{n="Slovak [sk-SK]"; c="sk-sk"},
-        @{n="Slovenian [sl-SI]"; c="sl-si"},
-        @{n="Spanish [es-ES]"; c="es-es"},
-        @{n="Swedish [sv-SE]"; c="sv-se"},
-        @{n="Turkish [tr-TR]"; c="tr-tr"},
-        @{n="Ukrainian [uk-UA]"; c="uk-ua"},
-        @{n="Vietnamese [vi-VN]"; c="vi-vn"}
-    )
-
-    Write-Host "`n--- เลือกภาษาที่ต้องการติดตั้ง ---" -ForegroundColor Yellow
-    for ($i=0; $i -lt $langs.Count; $i++) {
-        Write-Host ("[{0:00}] {1}" -f $i, $langs[$i].n)
+    for ($i = 1; $i -le 12; $i++) {
+        $cols = @()
+        for ($j = 0; $j -lt 3; $j++) {
+            $index = $i + ($j * 12)
+            if ($menuItems.ContainsKey($index)) {
+                $num = "[" + $index.ToString().PadLeft(2) + "]"
+                $name = $menuItems[$index].Name
+                $itemStr = "   " + "$num " + "$name"
+                $cleanLen = ($itemStr -replace '\p{M}', '').Length
+                $padding = " " * ([Math]::Max(0, 40 - $cleanLen))
+                $cols += "$itemStr$padding"
+            }
+        }
+        Write-Host ($cols -join "") -ForegroundColor Gray
     }
 
-    $sel = Read-Host "`nใส่หมายเลขภาษาที่ต้องการ"
-    $lang = $langs[$sel]
+    Write-Host ""
+    Write-Host "   ------------------------------------------------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "   [0] EXIT PROGRAM" -ForegroundColor Red
+}
 
-    if ($null -ne $lang) {
-        $url = "https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x64&language=$($lang.c)&version=O16GA"
-        $file = "$p\OfficeSetup.exe"
-
-        Write-Host "`nDownloading Microsoft 365 ($($lang.n))..." -ForegroundColor Green
-        try {
-            # ดาวน์โหลดแบบ Synchronous ผ่าน .NET WebClient (เร็วที่สุด)
-            (New-Object System.Net.WebClient).DownloadFile($url, $file)
-            
-            Write-Host "เริ่มการติดตั้งแบบเงียบ... (จะแสดงเปอร์เซ็นต์ในหน้าต่าง Setup)" -ForegroundColor Yellow
-            # ติดตั้งแบบเงียบ (แสดงเฉพาะ UI ความคืบหน้า)
-            Start-Process $file -ArgumentList "/configure" -Wait
-        } catch {
-            Write-Host "Error: $_" -ForegroundColor Red
-            exit
-        }
-    } else {
-        Write-Host "การเลือกไม่ถูกต้อง" -ForegroundColor Red
+while ($true) {
+    Show-Menu
+    Write-Host ""
+    Write-Host "   [#] SELECT OPTION: " -NoNewline -ForegroundColor Yellow
+    $choice = Read-Host
+    
+    if ($choice -eq '0') {
+        Write-Host "`n   [!] TERMINATING SESSIONS..." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Stop-Process -Name "WindowsTerminal" -Force -ErrorAction SilentlyContinue
+        Stop-Process -Id $PID -Force
         exit
     }
-    # คืนค่า UI
-    $ProgressPreference = $oldP
-}
 
-# ---------------------------------------------------------
-# 5. ส่วนการเปิดใช้งาน (Activation)
-# ---------------------------------------------------------
-$ans = Read-Host "`nติดตั้งเสร็จสมบูรณ์! จะเปิดการใช้งาน (Activate) Microsoft 365 เลยไหม? (y/n)"
-if ($ans -eq 'y') {
-    # ตัวแปรสำหรับคำสั่งรันที่คุณให้มา
-    $p="C:\phwyverysad"; 
-    $u="https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/activate_365.cmd"; 
-    $f="$p\activate_365.cmd"; 
+    $selected = $choice -as [int]
     
-    [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; 
-    $oldP=$ProgressPreference; 
-    $ProgressPreference='SilentlyContinue'; 
-    
-    if(!(Test-Path $p)){New-Item $p -Type Directory | Out-Null}; 
-    Add-MpPreference -ExclusionPath $p -EA 0; 
-    
-    try{
-        Write-Host "Downloading Activator..." -ForegroundColor Green; 
-        (New-Object System.Net.WebClient).DownloadFile($u,$f); 
-        if(Test-Path $f){
-            Write-Host "Running Activator Script..." -ForegroundColor Magenta; 
-            Start-Process $f -Wait
+    if ($selected -and $menuItems.ContainsKey($selected)) {
+        $selectedItem = $menuItems[$selected]
+        Write-Host "`n   [>] INITIALIZING: " -NoNewline -ForegroundColor Cyan
+        Write-Host "$($selectedItem.Name)" -ForegroundColor Green
+        Write-Host "   ------------------------------------------------------------------------------------------" -ForegroundColor DarkGray
+        
+        try {
+            Invoke-Expression $selectedItem.Cmd
+            Write-Host "`n   [+] OPERATION COMPLETED SUCCESSFULLY!" -ForegroundColor Green
+        } catch {
+            Write-Host "`n   [-] ERROR DETECTED IN COMMAND EXECUTION" -ForegroundColor Red
         }
-    }catch{
-        Write-Host "Error: $_" -ForegroundColor Red
-    }finally{
-        Write-Host "Cleaning up $p..." -ForegroundColor Gray; 
-        Start-Sleep -Seconds 3; 
-        if(Test-Path $p){Remove-Item $p -Recurse -Force -EA 0}; 
-        $ProgressPreference=$oldP; 
-        Write-Host "Done." -ForegroundColor Green
+
+        Write-Host "`n   PRESS ANY KEY TO RETURN TO MAIN MENU..." -ForegroundColor DarkYellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } else {
+        Write-Host "`n   [!] INVALID SELECTION - PLEASE TRY AGAIN" -ForegroundColor Red
+        Start-Sleep -Seconds 2
     }
-} else {
-    Write-Host "กระบวนการเสร็จสิ้น (ไม่ได้ทำการเปิดใช้งาน)" -ForegroundColor Yellow
 }
