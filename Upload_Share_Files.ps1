@@ -22,5 +22,4 @@ if ($ans -match "y") {
     Write-Host "`n[+] คุณสามารถ 'บันทึกเป็น แถบรายการโปรด' เพื่อเรียกใช้ ฝากไฟล์ & แชร์ไฟล์ ได้สะดวกยิ่งขึ้น" -ForegroundColor Cyan
 }
 
-# คืนค่า Progress Bar
 $ProgressPreference = 'Continue'
