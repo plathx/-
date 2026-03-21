@@ -28,7 +28,7 @@ $menuItems = @{
     25 = @{ Name = "ติดตั้ง Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
     26 = @{ Name = "ติดตั้ง Browser"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/browser.ps1 | iex" }
     27 = @{ Name = "ติดตั้ง X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button _Control.ps1 | iex" }
-}
+}   
 
 function Show-Menu {
     Clear-Host
@@ -45,10 +45,10 @@ function Show-Menu {
     Write-Host "   [ VERSION 2.0 ] - POWERED BY PLATHX" -ForegroundColor DarkYellow
     Write-Host "   ------------------------------------------------------------------------------------------------------------------" -ForegroundColor DarkGray
 
-    for ($i = 1; $i -le 9; $i++) {
+    for ($i = 1; $i -le 12; $i++) {
         $cols = @()
         for ($j = 0; $j -lt 3; $j++) {
-            $index = $i + ($j * 9)
+            $index = $i + ($j * 12)
             if ($menuItems.ContainsKey($index)) {
                 $num = "[" + $index.ToString().PadLeft(2) + "]"
                 $name = $menuItems[$index].Name

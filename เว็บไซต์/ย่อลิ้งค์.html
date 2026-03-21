@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบย่อลิงก์ - is.gd</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(-45deg, #4f46e5, #7e22ce, #ec4899, #3b82f6);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white/95 backdrop-blur-xl w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 transform hover:shadow-indigo-500/20">
+        
+        <div class="bg-gray-50/50 p-6 border-b border-gray-100 flex items-center justify-center relative">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                ย่อลิงก์ฟรี (is.gd)
+            </h1>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-6">
+            
+            <div>
+                <label for="longUrl" class="block text-sm font-medium text-gray-700 mb-2">วางลิงก์ที่ต้องการย่อที่นี่</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    </div>
+                    <input type="url" id="longUrl" placeholder="https://example.com/very-long-url..." 
+                        class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">รูปแบบลิงก์</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <label id="lblRandom" class="relative flex flex-col items-center justify-center p-4 border-2 border-indigo-500 bg-indigo-50 rounded-2xl cursor-pointer transition-all">
+                        <input type="radio" name="linkType" value="random" class="hidden" checked onchange="toggleOptions()">
+                        <span class="font-semibold text-indigo-700">สุ่มลิงก์</span>
+                        <span class="text-xs text-indigo-500 mt-1">is.gd/abcde</span>
+                    </label>
+                    <label id="lblCustom" class="relative flex flex-col items-center justify-center p-4 border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-2xl cursor-pointer transition-all text-gray-500">
+                        <input type="radio" name="linkType" value="custom" class="hidden" onchange="toggleOptions()">
+                        <span class="font-semibold text-gray-700">กำหนดเอง</span>
+                        <span class="text-xs text-gray-400 mt-1">is.gd/ชื่อของคุณ</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="customAliasBox" class="hidden opacity-0 transition-all duration-300 transform -translate-y-2">
+                <label for="customAlias" class="block text-sm font-medium text-gray-700 mb-2">กำหนดชื่อลิงก์ใหม่</label>
+                <div class="flex shadow-sm rounded-xl overflow-hidden border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                    <span class="inline-flex items-center px-4 bg-gray-100 text-gray-600 font-medium border-r border-gray-200">
+                        is.gd/
+                    </span>
+                    <input type="text" id="customAlias" placeholder="mycustomname" 
+                        class="flex-1 block w-full px-4 py-3.5 bg-gray-50 focus:bg-white outline-none text-gray-800 placeholder-gray-400">
+                </div>
+                <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    ภาษาอังกฤษ ตัวเลข และขีดกลาง (-) เท่านั้น
+                </p>
+            </div>
+
+            <div id="errorMsg" class="hidden bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm font-medium border border-red-100 flex items-center gap-2">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="errorText">เกิดข้อผิดพลาด</span>
+            </div>
+
+            <button id="submitBtn" onclick="processUrl()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-indigo-500/30 transform transition-all active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden">
+                <span id="btnText">ย่อลิงก์เลย</span>
+                <svg id="btnSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+
+        </div>
+
+        <div id="resultBox" class="hidden bg-gradient-to-br from-green-50 to-emerald-50 p-6 md:p-8 border-t border-green-100">
+            <h3 class="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                ย่อลิงก์สำเร็จ!
+            </h3>
+            
+            <div class="flex items-center gap-2 mb-6">
+                <input type="text" id="shortUrlResult" readonly class="w-full bg-white px-4 py-3.5 rounded-xl border border-green-200 text-green-700 font-medium focus:outline-none focus:ring-2 focus:ring-green-400">
+                <button onclick="copyLink()" class="bg-green-600 hover:bg-green-700 text-white p-3.5 rounded-xl transition-colors flex-shrink-0 group relative" title="คัดลอกลิงก์">
+                    <svg id="iconCopy" class="w-5 h-5 group-active:scale-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <svg id="iconCheck" class="hidden w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-green-100 shadow-sm">
+                <p class="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">QR Code สำหรับแสกน</p>
+                <img id="qrCodeImg" src="" alt="QR Code" class="w-32 h-32 object-contain">
+            </div>
+
+            <button onclick="resetForm()" class="w-full mt-6 text-sm text-green-700 font-medium hover:text-green-800 text-center flex items-center justify-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                ย่อลิงก์อื่นต่อ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function toggleOptions() {
+            const isCustom = document.querySelector('input[name="linkType"]:checked').value === 'custom';
+            const customAliasBox = document.getElementById('customAliasBox');
+            const lblRandom = document.getElementById('lblRandom');
+            const lblCustom = document.getElementById('lblCustom');
+
+            if (isCustom) {
+                lblCustom.classList.replace('border-gray-200', 'border-indigo-500');
+                lblCustom.classList.replace('bg-white', 'bg-indigo-50');
+                lblCustom.querySelector('span.text-gray-700').classList.replace('text-gray-700', 'text-indigo-700');
+                lblCustom.querySelector('span.text-gray-400').classList.replace('text-gray-400', 'text-indigo-500');
+                
+                lblRandom.classList.replace('border-indigo-500', 'border-gray-200');
+                lblRandom.classList.replace('bg-indigo-50', 'bg-white');
+                lblRandom.classList.add('hover:bg-gray-50');
+                lblRandom.querySelector('span.text-indigo-700').classList.replace('text-indigo-700', 'text-gray-700');
+                lblRandom.querySelector('span.text-indigo-500').classList.replace('text-indigo-500', 'text-gray-400');
+
+                customAliasBox.classList.remove('hidden');
+                setTimeout(() => {
+                    customAliasBox.classList.remove('opacity-0', '-translate-y-2');
+                    document.getElementById('customAlias').focus();
+                }, 10);
+            } else {
+                lblRandom.classList.replace('border-gray-200', 'border-indigo-500');
+                lblRandom.classList.replace('bg-white', 'bg-indigo-50');
+                lblRandom.classList.remove('hover:bg-gray-50');
+                lblRandom.querySelector('span.text-gray-700').classList.replace('text-gray-700', 'text-indigo-700');
+                lblRandom.querySelector('span.text-gray-400').classList.replace('text-gray-400', 'text-indigo-500');
+
+                lblCustom.classList.replace('border-indigo-500', 'border-gray-200');
+                lblCustom.classList.replace('bg-indigo-50', 'bg-white');
+                lblCustom.querySelector('span.text-indigo-700').classList.replace('text-indigo-700', 'text-gray-700');
+                lblCustom.querySelector('span.text-indigo-500').classList.replace('text-indigo-500', 'text-gray-400');
+
+                customAliasBox.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => {
+                    customAliasBox.classList.add('hidden');
+                    document.getElementById('customAlias').value = '';
+                }, 300);
+            }
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('errorMsg');
+            document.getElementById('errorText').innerText = message;
+            errorBox.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').classList.add('hidden');
+        }
+
+        function setLoading(isLoading) {
+            const btn = document.getElementById('submitBtn');
+            const text = document.getElementById('btnText');
+            const spinner = document.getElementById('btnSpinner');
+            
+            if (isLoading) {
+                btn.disabled = true;
+                btn.classList.add('opacity-80', 'cursor-not-allowed');
+                text.innerText = 'กำลังย่อลิงก์...';
+                spinner.classList.remove('hidden');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                text.innerText = 'ย่อลิงก์เลย';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function fetchIsGdJSONP(longUrl, customAlias) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'isgd_callback_' + Math.round(100000 * Math.random());
+                
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+
+                const script = document.createElement('script');
+                let apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}&callback=${callbackName}`;
+                
+                if (customAlias) {
+                    apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
+                }
+
+                script.src = apiUrl;
+                script.onerror = () => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'));
+                };
+
+                document.body.appendChild(script);
+            });
+        }
+
+        async function processUrl() {
+            hideError();
+            document.getElementById('resultBox').classList.add('hidden');
+
+            const longUrl = document.getElementById('longUrl').value.trim();
+            const isCustom = document.querySelector('input[name="linkType"]:checked').value === 'custom';
+            const customAlias = document.getElementById('customAlias').value.trim();
+
+            if (!longUrl) {
+                showError('กรุณากรอกลิงก์ที่ต้องการย่อ');
+                document.getElementById('longUrl').focus();
+                return;
+            }
+            if (isCustom && !customAlias) {
+                showError('กรุณากำหนดชื่อลิงก์ที่ต้องการ');
+                document.getElementById('customAlias').focus();
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const data = await fetchIsGdJSONP(longUrl, isCustom ? customAlias : null);
+
+                if (data.shorturl) {
+                    document.getElementById('shortUrlResult').value = data.shorturl;
+                    document.getElementById('qrCodeImg').src = data.shorturl + '.qr';
+                    
+                    document.getElementById('resultBox').classList.remove('hidden');
+                } else if (data.errormessage) {
+                    let errorMsg = data.errormessage;
+                    if (errorMsg.includes("already in use")) errorMsg = "ชื่อลิงก์นี้ถูกใช้งานไปแล้ว กรุณาเปลี่ยนชื่อใหม่";
+                    if (errorMsg.includes("Please enter a valid URL")) errorMsg = "รูปแบบลิงก์ไม่ถูกต้อง (ต้องขึ้นต้นด้วย http:// หรือ https://)";
+                    showError(errorMsg);
+                }
+            } catch (error) {
+                showError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function copyLink() {
+            const copyText = document.getElementById("shortUrlResult");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand("copy");
+                
+                const iconCopy = document.getElementById('iconCopy');
+                const iconCheck = document.getElementById('iconCheck');
+                
+                iconCopy.classList.add('hidden');
+                iconCheck.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    iconCopy.classList.remove('hidden');
+                    iconCheck.classList.add('hidden');
+                }, 2000);
+            } catch (err) {
+                alert('ไม่สามารถคัดลอกได้อัตโนมัติ กรุณากดคัดลอกด้วยตนเอง');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('longUrl').value = '';
+            document.getElementById('customAlias').value = '';
+            document.getElementById('resultBox').classList.add('hidden');
+            hideError();
+            document.getElementById('longUrl').focus();
+        }
+    </script>
+</body>
+</html>
