@@ -14,11 +14,11 @@ Start-Process $file
 
 # --- Interactive Choice ---
 Clear-Host
-$ans = Read-Host "ต้องการลบ 'ฝากไฟล์ & แชร์ไฟล์' ($dir) หรือไม่? (Y/N)"
+$ans = Read-Host "ต้องการลบ 'ฝากไฟล์ & แชร์ไฟล์' หรือไม่? (Y/N)"
 
 if ($ans -match "y") {
     Remove-Item -Path $dir -Recurse -Force
-    Write-Host "`n[!] ลบโฟลเดอร์ Web Server เรียบร้อยแล้ว" -ForegroundColor Yellow
+    Write-Host "`n[!] ลบ ฝากไฟล์ & แชร์ไฟล์ เรียบร้อยแล้ว" -ForegroundColor Yellow
 } else {
     Write-Host "`n[+] คุณสามารถ 'บันทึกเป็น แถบรายการโปรด' เพื่อเรียกใช้ ฝากไฟล์ & แชร์ไฟล์ ได้สะดวกยิ่งขึ้น" -ForegroundColor Cyan
 }
