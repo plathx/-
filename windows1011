@@ -1,67 +1,71 @@
-# --- 1. Windows Update ---
-Write-Host "Checking for Windows Updates..." -ForegroundColor Cyan
-Install-Module PSWindowsUpdate -Force -AllowClobber -Scope CurrentUser -ErrorAction SilentlyContinue
-$updates = Get-WindowsUpdate -AcceptAll -Install -IgnoreReboot
+# ==========================================================
+# 1. Windows Update Check & Install
+# ==========================================================
+Write-Host "--- 1. Checking Windows Updates ---" -ForegroundColor Cyan
+Install-Module PSWindowsUpdate -Force -SkipPublisherCheck -Scope CurrentUser -ErrorAction SilentlyContinue
+Import-Module PSWindowsUpdate
+$updates = Get-WindowsUpdate -AcceptAll -Install -AutoReboot:$false
+
 if ($updates) {
-    Write-Host "Windows Updates installed. A reboot is required to complete the process." -ForegroundColor Yellow
+    Write-Host "Updates found and installed. You will need to RESTART after all tasks are done." -ForegroundColor Yellow
 } else {
-    Write-Host "No updates found, skipping to step 2." -ForegroundColor Green
+    Write-Host "No updates found. Skipping..." -ForegroundColor Green
 }
 
-# --- 2. Check Microsoft Store ---
-Write-Host "Checking Microsoft Store..." -ForegroundColor Cyan
-$storeApp = Get-AppxPackage -AllUsers Microsoft.WindowsStore
-if (!$storeApp) {
-    Write-Host "Microsoft Store not found or needs re-registration. Processing..." -ForegroundColor Yellow
-    Get-AppxPackage -allusers Microsoft.WindowsStore | Foreach {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppxManifest.xml"}
-}
+# ==========================================================
+# 2. Microsoft Store Check & Re-register
+# ==========================================================
+Write-Host "`n--- 2. Checking/Refreshing Microsoft Store ---" -ForegroundColor Cyan
+Get-AppxPackage -allusers Microsoft.WindowsStore | Foreach {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppxManifest.xml"}
 
-# --- 3. Run Remote Scripts ---
-Write-Host "Running custom installation scripts..." -ForegroundColor Cyan
+# ==========================================================
+# 3. Running Remote Scripts (irm | iex)
+# ==========================================================
+Write-Host "`n--- 3. Running Custom Scripts from GitHub ---" -ForegroundColor Cyan
 irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_All.ps1 | iex
 irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build.ps1 | iex
 
-# --- 4. Winget Install (MS Store Apps) ---
-Write-Host "Installing apps via Winget..." -ForegroundColor Cyan
+# ==========================================================
+# 4. Winget MS Store Installations
+# ==========================================================
+Write-Host "`n--- 4. Installing Winget Packages ---" -ForegroundColor Cyan
 $wingetIds = @("9WZDNCRFHVN5", "9N7JSXC1SJK6", "9N0DX20HK701", "9PCFS5B6T72H", "9WZDNCRFJBH4", "9MZ95KL8MR0L", "9PM860492SZD", "9N0866FS04W8", "9MV0B5HZVK9Z", "XP9KN75RRB9NHS")
 foreach ($id in $wingetIds) {
     winget install --id $id --source msstore --accept-package-agreements --accept-source-agreements
 }
 
-# --- 5. Download and Auto Install ---
-Write-Host "Downloading allapp.zip..." -ForegroundColor Cyan
-$downloadUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%82%E0%B8%AD%E0%B8%A1/allapp.zip"
-$downloadPath = "$env:USERPROFILE\Downloads\allapp.zip"
-$extractPath = "$env:USERPROFILE\Downloads\allapp"
+# ==========================================================
+# 5. Local App Installation (Auto & Manual)
+# ==========================================================
+Write-Host "`n--- 5. Preparing Local Apps ---" -ForegroundColor Cyan
+Start-Process "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/allapp.zip"
+Read-Host "Press ENTER after download and extracted to '$env:USERPROFILE\Downloads\allapp'"
+Set-Location "$env:USERPROFILE\Downloads\allapp"
 
-Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath
-Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
-Set-Location -Path $extractPath
-
-# การติดตั้งแบบ Silent (รันพร้อมกัน)
-Write-Host "Starting Silent Installations..." -ForegroundColor Green
+# --- Auto Install (Silent - รันพร้อมกันหลายหน้าต่าง) ---
 $silentApps = @(
-    @{ File = "iot_v215.exe"; Args = "/VERYSILENT", "/ALLUSERS", "/SUPPRESSMSGBOXES", "/NORESTART" },
-    @{ File = "BraveBrowserSetup-BRV011.exe"; Args = "/silent", "/install" },
-    @{ File = "DiscordCanarySetup.exe"; Args = "--silent" },
-    @{ File = "DiscordPTBSetup-win64.exe"; Args = "--silent" },
-    @{ File = "DiscordSetup.exe"; Args = "--silent" },
-    @{ File = "OfficeSetup.exe"; Args = "/configure", "configuration.xml" },
-    @{ File = "parsec-windows.exe"; Args = "/S", "/shared", "/accept_eula" },
-    @{ File = "SteamSetup.exe"; Args = "/S" },
-    @{ File = "st-setup-1.8.30.exe"; Args = "/S", "/silent", "/verysilent" },
-    @{ File = "SuperF4-1.4.exe"; Args = "/S" },
-    @{ File = "VoiceChanger64(1.98).exe"; Args = "/S" },
-    @{ File = "winrar-x64-720_2.exe"; Args = "/S" }
+    @{ Path = ".\iot_v215.exe"; Args = "/VERYSILENT", "/ALLUSERS", "/SUPPRESSMSGBOXES", "/NORESTART" },
+    @{ Path = ".\BraveBrowserSetup-BRV011.exe"; Args = "/silent", "/install" },
+    @{ Path = ".\DiscordCanarySetup.exe"; Args = "--silent" },
+    @{ Path = ".\DiscordPTBSetup-win64.exe"; Args = "--silent" },
+    @{ Path = ".\DiscordSetup.exe"; Args = "--silent" },
+    @{ Path = ".\OfficeSetup.exe"; Args = "/configure", "configuration.xml" },
+    @{ Path = ".\parsec-windows.exe"; Args = "/S", "/shared", "/accept_eula" },
+    @{ Path = ".\SteamSetup.exe"; Args = "/S" },
+    @{ Path = ".\st-setup-1.8.30.exe"; Args = "/S", "/silent", "/verysilent" },
+    @{ Path = ".\SuperF4-1.4.exe"; Args = "/S" },
+    @{ Path = ".\VoiceChanger64(1.98).exe"; Args = "/S" },
+    @{ Path = ".\winrar-x64-720_2.exe"; Args = "/S" }
 )
 
 foreach ($app in $silentApps) {
-    if (Test-Path $app.File) {
-        Start-Process -FilePath $app.File -ArgumentList $app.Args -Verb RunAs
+    if (Test-Path $app.Path) {
+        Write-Host "Launching Auto-Install: $($app.Path)" -ForegroundColor Gray
+        Start-Process -FilePath $app.Path -ArgumentList $app.Args -Verb RunAs
     }
 }
 
-# การติดตั้งแบบ Manual (เปิดทีละโปรแกรมแล้วรอ Enter)
+# --- Manual Install (รันทีละตัว และรอให้กด Enter) ---
 $manualApps = @(
     "BlueStacksInstaller_5.22.167.1006_native_c8aef63c82a49115bddb561ec719c800_MzsxNQ==.exe",
     "Fishstrap.exe",
@@ -72,32 +76,40 @@ $manualApps = @(
     "amd-software-adrenalin-edition-26.3.1-minimalsetup-260317_web.exe"
 )
 
-foreach ($exe in $manualApps) {
-    if (Test-Path $exe) {
-        Write-Host "Installing $exe... Press ENTER after finishing to open the next one." -ForegroundColor Yellow
-        Start-Process -FilePath $exe -Verb RunAs
-        Read-Host "Press Enter to continue"
+foreach ($mApp in $manualApps) {
+    if (Test-Path $mApp) {
+        Write-Host "`n[Action Required] Installing: $mApp" -ForegroundColor Yellow
+        Start-Process -FilePath $mApp -Wait
+        Read-Host "Press ENTER to continue to the next manual installer..."
     }
 }
 
-# --- 6. Move and Execute Desktop Apps ---
-Write-Host "Moving and running Desktop applications..." -ForegroundColor Cyan
-$desktopPath = if (Test-Path "$env:USERPROFILE\OneDrive\Desktop") { "$env:USERPROFILE\OneDrive\Desktop" } else { "$env:USERPROFILE\Desktop" }
-$appsToMove = @("AnyDesk.exe", "VencordInstaller.exe")
+# ==========================================================
+# 6. Desktop Specific Installations
+# ==========================================================
+Write-Host "`n--- 6. Desktop Apps ---" -ForegroundColor Cyan
+$deskPath = if (Test-Path "$env:USERPROFILE\OneDrive\Desktop") { "$env:USERPROFILE\OneDrive\Desktop" } else { "$env:USERPROFILE\Desktop" }
+Set-Location $deskPath
 
-foreach ($file in $appsToMove) {
-    if (Test-Path $file) {
-        Move-Item -Path $file -Destination $desktopPath -Force
-        Start-Process -FilePath "$desktopPath\$file"
+$desktopApps = @("AnyDesk.exe", "VencordInstaller.exe")
+foreach ($dApp in $desktopApps) {
+    if (Test-Path $dApp) {
+        Start-Process -FilePath $dApp -Wait
+        Read-Host "Press ENTER after $dApp installation is finished"
     }
 }
 
-# --- 7. Final Clean up & Optimization ---
-Write-Host "Running final optimization scripts..." -ForegroundColor Cyan
+# ==========================================================
+# 7. Final Optimization Scripts
+# ==========================================================
+Write-Host "`n--- 7. Final System Optimization ---" -ForegroundColor Cyan
 irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex
 irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex
 irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex
 irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex
 irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button_Control.ps1 | iex
+irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/spotify_premium.ps1 | iex
+irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_powerplan.ps1 | iex
+irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic.ps1 | iex
 
-Write-Host "All tasks completed!" -ForegroundColor Green
+Write-Host "`n[DONE] All tasks completed successfully!" -ForegroundColor Green
