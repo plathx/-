@@ -29,6 +29,7 @@ $menuItems = @{
     26 = @{ Name = "Browser"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/browser.ps1 | iex" }
     27 = @{ Name = "X-Mouse Button Control"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button_Control.ps1 | iex" }
     28 = @{ Name = "MiniTool Partition Wizard Pro"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/MiniTool_Partition_Wizard_Pro.ps1 | iex" }
+    29 = @{ Name = "ลงวินโด้ใหม่"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/windows1011 | iex" }
 }  
 
 function Show-Menu {
