@@ -333,7 +333,6 @@
 
             const provider = document.querySelector('input[name="provider"]:checked').value;
             
-            // Set UI to loading state
             btnUpload.disabled = true;
             btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดำเนินการ...';
             btnUpload.classList.replace('bg-brand-600', 'bg-gray-400');
@@ -351,7 +350,6 @@
                     url = await uploadToCatbox(currentFile);
                 }
 
-                // Success State
                 resultUrl.value = url;
                 btnOpen.href = url;
                 progressContainer.classList.add('hidden');
@@ -360,19 +358,16 @@
                 showToast('อัปโหลดเสร็จสมบูรณ์!');
 
             } catch (err) {
-                // Error State
                 console.error(err);
                 progressContainer.classList.add('hidden');
                 showError(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด กรุณาลองใหม่อีกครั้ง');
             } finally {
-                // Reset button text
                 btnUpload.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> อัปโหลดไฟล์ใหม่';
                 btnUpload.classList.replace('bg-gray-400', 'bg-brand-600');
                 btnUpload.disabled = false;
             }
         });
 
-        // --- API Integrations ---
 
         function updateProgress(percent, statusText = 'กำลังอัปโหลด...') {
             progressPercent.textContent = `${Math.round(percent)}%`;
@@ -383,7 +378,6 @@
         async function uploadToGofile(file) {
             updateProgress(0, 'กำลังเชื่อมต่อเซิร์ฟเวอร์ Gofile...');
             
-            // 1. Get the best server
             const serverRes = await fetch('https://api.gofile.io/servers');
             const serverData = await serverRes.json();
             
@@ -394,7 +388,6 @@
             const serverName = serverData.data.servers[0].name;
             updateProgress(5, `เชื่อมต่อเซิร์ฟเวอร์ ${serverName} แล้ว...`);
 
-            // 2. Upload file using XMLHttpRequest for progress tracking
             const formData = new FormData();
             formData.append('file', file);
 
@@ -404,7 +397,6 @@
                 
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
-                        // Map progress from 5% to 99%
                         const percentComplete = 5 + ((e.loaded / e.total) * 94);
                         updateProgress(percentComplete, 'กำลังอัปโหลดไฟล์...');
                     }

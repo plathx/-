@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft 365 ProPlus Retail Downloads</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0078d4;
+            --bg-color: #f3f2f1;
+            --text-color: #323130;
+            --card-bg: #ffffff;
+            --border-color: #edebe9;
+        }
+
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 20px;
+            box-sizing: border-box;
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th {
+            background-color: #faf9f8;
+            color: #605e5c;
+            font-weight: 600;
+            text-align: left;
+            padding: 15px;
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 15px;
+        }
+
+        tr:hover {
+            background-color: #f8f8f8;
+        }
+
+        .lang-name {
+            font-weight: 600;
+            color: #201f1e;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .btn-online {
+            background-color: #e1f0fe;
+            color: #0078d4;
+        }
+
+        .btn-online:hover {
+            background-color: #0078d4;
+            color: white;
+        }
+
+        .btn-offline {
+            background-color: #edebe9;
+            color: #323130;
+        }
+
+        .btn-offline:hover {
+            background-color: #323130;
+            color: white;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #f3f2f1;
+            margin-left: 5px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            td, th { padding: 10px; font-size: 13px; }
+            .btn { padding: 6px 10px; min-width: 60px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Microsoft 365 ProPlus Retail</h1>
+    
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="ค้นหาภาษา เช่น Thai, English, zh-CN...">
+    </div>
+
+    <div class="table-wrapper">
+        <table id="downloadTable">
+            <thead>
+                <tr>
+                    <th>ภาษา (Language)</th>
+                    <th>Online x64</th>
+                    <th>Online x32</th>
+                    <th>Offline (x32/x64)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const data = [
+        ["English [en-US]", "en-us"], ["Thai [th-TH]", "th-th"], ["Chinese (Simplified) [zh-CN]", "zh-cn"],
+        ["Chinese (Taiwan) [zh-TW]", "zh-tw"], ["Japanese [ja-JP]", "ja-jp"], ["Korean [ko-KR]", "ko-kr"],
+        ["Arabic [ar-SA]", "ar-sa"], ["Bulgarian [bg-BG]", "bg-bg"], ["Czech [cs-CZ]", "cs-cz"],
+        ["Danish [da-DK]", "da-dk"], ["German [de-DE]", "de-de"], ["Greek [el-GR]", "el-gr"],
+        ["Spanish [es-ES]", "es-es"], ["Estonian [et-EE]", "et-ee"], ["Finnish [fi-FI]", "fi-fi"],
+        ["French [fr-FR]", "fr-fr"], ["Hebrew [he-IL]", "he-il"], ["Hindi [hi-IN]", "hi-in"],
+        ["Croatian [hr-HR]", "hr-hr"], ["Hungarian [hu-HU]", "hu-hu"], ["Indonesian [id-ID]", "id-id"],
+        ["Italian [it-IT]", "it-it"], ["Kazakh [kk-KZ]", "kk-kz"], ["Lithuanian [lt-LT]", "lt-lt"],
+        ["Latvian [lv-LV]", "lv-lv"], ["Malay [ms-MY]", "ms-my"], ["Dutch [nl-NL]", "nl-nl"],
+        ["Norwegian [nb-NO]", "nb-no"], ["Polish [pl-PL]", "pl-pl"], ["Portuguese (Brazil) [pt-BR]", "pt-br"],
+        ["Portuguese (Portugal) [pt-PT]", "pt-pt"], ["Romanian [ro-RO]", "ro-ro"], ["Russian [ru-RU]", "ru-ru"],
+        ["Slovak [sk-SK]", "sk-sk"], ["Slovenian [sl-SI]", "sl-si"], ["Serbian (Latin) [sr-latn-rs]", "sr-latn-rs"],
+        ["Swedish [sv-SE]", "sv-se"], ["Turkish [tr-TR]", "tr-tr"], ["Ukrainian [uk-UA]", "uk-ua"], ["Vietnamese [vi-VN]", "vi-vn"]
+    ];
+
+    const tableBody = document.getElementById('tableBody');
+
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        const langName = item[0];
+        const langCode = item[1];
+        
+        row.innerHTML = `git add . && git commit -m "update code" && git push
+            <td class="lang-name">${langName}</td>
+            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x64&language=${langCode}&version=O16GA" class="btn btn-online">Download</a></td>
+            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x86&language=${langCode}&version=O16GA" class="btn btn-online">Download</a></td>
+            <td><a href="https://officecdn.microsoft.com/db/492350f6-3a01-4f97-b9c0-c7c6ddf67d60/media/${langCode}/O365ProPlusRetail.img" class="btn btn-offline">IMG File</a></td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    function searchTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toUpperCase();
+        let table = document.getElementById("downloadTable");
+        let tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td")[0];
+            if (td) {
+                let txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
