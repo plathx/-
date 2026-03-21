@@ -24,7 +24,7 @@ Write-Host "==============================" -ForegroundColor Green
 
 if ($choice -match "y") {
     Remove-Item -Path $dir -Recurse -Force
-    Write-Host "`n[!] ลบโฟลเดอร์ Web Server เรียบร้อยแล้ว" -ForegroundColor Yellow
+    Write-Host "`n[!] ลบ ย่อลิ้งค์ เรียบร้อยแล้ว" -ForegroundColor Yellow
 } else {
     Write-Host "`n[+] คุณสามารถ บันทึกเป็น แถบรายการโปรด เพื่อเรียกใช้ ย่อลิ้งค์ ได้สะดวกยิ่งขึ้น" -ForegroundColor Cyan
 }
