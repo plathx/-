@@ -11,7 +11,7 @@ $menuItems = @{
     8  = @{ Name = "Discord 3 ตัว"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/rwm_discord.ps1 | iex" }
     9  = @{ Name = "Clean Ram"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex" }
     10 = @{ Name = "ปรับแต่ง Windows (WinUtil)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/winutil.ps1 | iex" }
-    11 = @{ Name = "สร้างลิ้งก์ดาวน์โหลดไฟล์"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/setup_share.ps1 | iex" }
+    11 = @{ Name = "ฝากไฟล์ & แชร์ไฟล์"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Upload_Share_Files.ps1 | iex" }
     12 = @{ Name = "สร้างจุดย้อนระบบ (Restore)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/system_restore.ps1 | iex" }
     13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options.ps1 | iex" }
     14 = @{ Name = "Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex" }
