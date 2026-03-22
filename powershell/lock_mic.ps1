@@ -6,37 +6,52 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 $InstallDir = "C:\phwyverysad"
 $ZipPath = "$InstallDir\lock_mic_volume.zip"
-$Url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
+# แก้ไขลิงก์โดยใช้การ Encode ตัวอักษรไทยให้เป็นรหัส URL
+$Url = [System.Uri]::EscapeUriString("https://github.com/plathx/-/releases/download/จูนคอม/lock_mic_volume.zip")
 
 Function Install-Process {
     Write-Host "Installing..." -ForegroundColor Cyan
     if (!(Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
     Add-MpPreference -ExclusionPath $InstallDir
     
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile($Url, $ZipPath)
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $wc = New-Object System.Net.WebClient
+        $wc.DownloadFile($Url, $ZipPath)
+        Write-Host "Download Success." -ForegroundColor Green
+    } catch {
+        Write-Error "Download Failed: $_"
+        return
+    }
     
     Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
-    Remove-Item $ZipPath
+    Remove-Item $ZipPath -ErrorAction SilentlyContinue
     
     # เมนูเลือกความดัง
-    Write-Host "Select Microphone Volume Level:"
+    Write-Host "`nSelect Microphone Volume Level:"
     $levels = @{"1" = "100%"; "2" = "75%"; "3" = "50%"; "4" = "25%"}
     foreach($key in $levels.Keys) { Write-Host "$key. $($levels[$key])" }
     $choice = Read-Host "Enter choice (1-4)"
     
-    $targetFolder = Get-ChildItem -Path $InstallDir -Directory | Select-Object -First 1
-    $runPath = Join-Path $targetFolder.FullName "$($levels[$choice])\Run_atomatically.bat"
+    # หาโฟลเดอร์ข้างใน (สมมติว่าเป็นโฟลเดอร์ที่แตกออกมา)
+    $innerFolder = Get-ChildItem -Path $InstallDir -Directory | Select-Object -First 1
+    $runPath = Join-Path $innerFolder.FullName "$($levels[$choice])\Run_atomatically.bat"
     
-    Start-Process -FilePath $runPath -WindowStyle Hidden
-    
-    # รอจนกว่า process จะปิด
-    while (Get-Process "nircmdc" -ErrorAction SilentlyContinue) {
-        Start-Sleep -Seconds 5
+    if (Test-Path $runPath) {
+        Start-Process -FilePath $runPath -WindowStyle Hidden
+        Write-Host "Running process in background..." -ForegroundColor Yellow
+        
+        # ตรวจสอบทุกๆ 5 วิ ว่า nircmdc ปิดหรือยัง
+        while (Get-Process "nircmdc" -ErrorAction SilentlyContinue) {
+            Start-Sleep -Seconds 5
+        }
+        
+        # ลบโฟลเดอร์เมื่อจบการทำงาน
+        Remove-Item $InstallDir -Recurse -Force
+        Write-Host "Task finished. Cleanup complete." -ForegroundColor Green
+    } else {
+        Write-Error "Could not find Run_atomatically.bat at $runPath"
     }
-    Remove-Item $InstallDir -Recurse -Force
-    Write-Host "Installation cleaned up." -ForegroundColor Green
 }
 
 Function Uninstall-Process {
@@ -52,6 +67,7 @@ Function Uninstall-Process {
 }
 
 # เมนูหลัก
+Write-Host "--- Main Menu ---"
 Write-Host "1. Install"
 Write-Host "2. Uninstall"
 $opt = Read-Host "Select Option"
