@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         VirusTotal Keyword Scanner V3.7 (Bug Fix)
+// @name         VirusTotal Keyword Scanner (Draggable UI & Highlight Fix)
 // @namespace    http://tampermonkey.net/
-// @version      3.7
-// @description  แก้ไข Bug การตรวจจับค้าง และปรับปรุงความแม่นยำในการสแกน
-// @author       Gemini & User
+// @version      4.0
+// @description  สแกนคีย์เวิร์ดมัลแวร์ ไฮไลต์สีก่อนแล้วค่อยแจ้งเตือน พร้อมเมนูลอยแบบลากได้
+// @author       Gemini & User (UI by Assistant)
 // @match        https://www.virustotal.com/*
 // @grant        none
 // ==/UserScript==
@@ -11,6 +11,9 @@
 (function() {
     'use strict';
 
+    // -----------------------------------------------------------------
+    // ฐานข้อมูลมัลแวร์ (Malware Database)
+    // -----------------------------------------------------------------
     const malwareDb = {
         'PYTHON': 'Scripting Language: มักถูกใช้รันโค้ดอันตรายผ่าน Packer เช่น PyInstaller เพื่อหลบเลี่ยงการสแกนแบบ Static',
         'EXPIRO': 'File Infector: ไวรัสอันตรายที่แพร่กระจายโดยการเกาะไฟล์ .EXE และขโมยข้อมูลผู้ใช้ส่งกลับไปยัง C2',
@@ -50,6 +53,9 @@
     let foundMalwareSet = new Set();
     let count = 0;
 
+    // -----------------------------------------------------------------
+    // ฟังก์ชันการสแกน (Scanner Logic)
+    // -----------------------------------------------------------------
     function findAndHighlight(root) {
         if (!root) return;
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
@@ -57,7 +63,7 @@
         while (node = walker.nextNode()) {
             const parent = node.parentElement;
             if (!parent || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)) continue;
-            if (parent.offsetParent === null) continue; 
+            if (parent.offsetParent === null) continue;
 
             const text = node.textContent;
             if (regex.test(text)) {
@@ -65,7 +71,6 @@
                 if (matches) {
                     matches.forEach(m => {
                         const upperM = m.toUpperCase();
-
                         foundMalwareSet.add(upperM);
                     });
 
@@ -91,8 +96,11 @@
     function startScan() {
         count = 0;
         foundMalwareSet.clear();
-        intelBtn.style.display = 'none';
 
+        const intelBtn = document.getElementById('vt-intel-btn');
+        if (intelBtn) intelBtn.style.display = 'none';
+
+        // เคลียร์ไฮไลต์เก่าทิ้ง
         document.querySelectorAll('.vt-found').forEach(el => {
             el.style.backgroundColor = '';
             el.style.outline = '';
@@ -100,21 +108,33 @@
             el.classList.remove('vt-found');
         });
 
+        // เริ่มระบายสีไฮไลต์ใหม่
         findAndHighlight(document.body);
 
         if (count > 0 && foundMalwareSet.size > 0) {
             const firstFound = document.querySelector('.vt-found');
-            if (firstFound) firstFound.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            intelBtn.style.display = 'block';
-            alert(`🚨 พบภัยคุกคาม ${count} จุด!`);
+            if (firstFound) {
+                // เลื่อนหน้าจอไปหาคำที่เจอแบบ Smooth
+                firstFound.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // ⭐ ใช้ setTimeout หน่วงเวลา 300 มิลลิวินาที
+            // เพื่อให้เบราว์เซอร์ Render สีไฮไลต์ลงจอก่อน แล้ว Alert ค่อยเด้ง
+            setTimeout(() => {
+                if (intelBtn) intelBtn.style.display = 'flex';
+                alert(`🚨 พบภัยคุกคาม ${count} จุด!\n\nคลิกที่ไอคอน 🛡️ แล้วเลือกเมนู "📋 View Intel Report" เพื่อดูรายละเอียด`);
+            }, 300);
+
         } else {
-            alert('🔍 สแกนเสร็จสิ้น: ไม่พบมัลแวร์ตามฐานข้อมูลในหน้านี้');
+            // หน่วงเวลาเล็กน้อยเช่นกัน เผื่อการแสดงผล UI
+            setTimeout(() => {
+                alert('🔍 สแกนเสร็จสิ้น: ไม่พบมัลแวร์ตามฐานข้อมูลในหน้านี้');
+            }, 100);
         }
     }
 
     function showIntel() {
         let message = "📋 บทสรุปข้อมูลภัยคุกคาม (Threat Intel):\n" + "─".repeat(30) + "\n\n";
-
         const sortedResults = Array.from(foundMalwareSet).sort();
 
         sortedResults.forEach(name => {
@@ -127,20 +147,235 @@
         if (foundMalwareSet.size === 0) {
             message = "ไม่พบข้อมูลมัลแวร์จากการสแกนครั้งล่าสุด";
         }
-
         alert(message);
     }
 
-    const scanBtn = document.createElement('button');
-    scanBtn.innerHTML = '🛡️ Deep Scan';
-    scanBtn.style.cssText = `position: fixed; bottom: 25px; right: 25px; z-index: 10000; padding: 15px 25px; background: #d32f2f; color: white; border: 2px solid #fff; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-weight: bold;`;
-    scanBtn.onclick = startScan;
+    // -----------------------------------------------------------------
+    // สร้าง UI (Draggable Floating Menu)
+    // -----------------------------------------------------------------
+    const initUI = () => {
+        const style = document.createElement("style");
+        style.innerHTML = `
+            #vt-wrapper {
+                position: fixed;
+                z-index: 999999;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                width: 60px;
+                height: 60px;
+                top: 50%;
+                left: calc(100vw - 60px);
+                transform: translateY(-50%);
+                transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            }
+            #vt-wrapper.dragging {
+                transition: none !important;
+            }
 
-    const intelBtn = document.createElement('button');
-    intelBtn.innerHTML = '📋 View Intel Report';
-    intelBtn.style.cssText = `position: fixed; bottom: 90px; right: 25px; z-index: 10000; padding: 12px 20px; background: #1976d2; color: white; border: 2px solid #fff; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-weight: bold; display: none;`;
-    intelBtn.onclick = showIntel;
+            #vt-toggle-btn {
+                background: #1e1e1e;
+                border: 3px solid #d32f2f;
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                cursor: grab;
+                font-size: 28px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                z-index: 2;
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.2s ease, border-color 0.2s ease;
+                user-select: none;
+            }
+            #vt-toggle-btn:active { cursor: grabbing; }
+            #vt-toggle-btn:hover {
+                background: #2a2a2a;
+                border-color: #f44336;
+            }
 
-    document.body.appendChild(scanBtn);
-    document.body.appendChild(intelBtn);
+            #vt-icon {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            #vt-wrapper.menu-open #vt-icon {
+                transform: scale(1.1);
+            }
+
+            .snap-right #vt-toggle-btn { transform: translateX(35px); }
+            .snap-right:hover #vt-toggle-btn, .snap-right.menu-open #vt-toggle-btn { transform: translateX(0); }
+            .snap-left #vt-toggle-btn { transform: translateX(-35px); }
+            .snap-left:hover #vt-toggle-btn, .snap-left.menu-open #vt-toggle-btn { transform: translateX(0); }
+
+            #vt-panel {
+                position: absolute;
+                top: 50%;
+                background: #1a1c23;
+                border: 1px solid #333;
+                padding: 15px;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+                width: 220px;
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transform: translateY(-50%) scale(0.8);
+                z-index: 1;
+            }
+
+            .snap-right #vt-panel { right: 75px; left: auto; transform-origin: right center; }
+            .snap-left #vt-panel { left: 75px; right: auto; transform-origin: left center; }
+
+            #vt-wrapper.menu-open #vt-panel {
+                opacity: 1;
+                pointer-events: auto;
+                transform: translateY(-50%) scale(1);
+            }
+
+            .vt-title {
+                font-weight: 800;
+                font-size: 15px;
+                margin-bottom: 12px;
+                color: #fff;
+                text-align: center;
+                border-bottom: 2px solid #444;
+                padding-bottom: 10px;
+                letter-spacing: 0.5px;
+            }
+
+            .vt-btn {
+                width: 100%;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                margin-bottom: 10px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+            .vt-btn:last-child { margin-bottom: 0; }
+
+            #vt-scan-btn { background: linear-gradient(135deg, #d32f2f, #b71c1c); box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3); }
+            #vt-scan-btn:hover { background: linear-gradient(135deg, #f44336, #d32f2f); transform: translateY(-2px); }
+
+            #vt-intel-btn { background: linear-gradient(135deg, #1976d2, #0d47a1); box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3); }
+            #vt-intel-btn:hover { background: linear-gradient(135deg, #2196f3, #1976d2); transform: translateY(-2px); }
+        `;
+        document.head.appendChild(style);
+
+        const wrapper = document.createElement("div");
+        wrapper.id = "vt-wrapper";
+        wrapper.className = "snap-right";
+        wrapper.innerHTML = `
+            <button id="vt-toggle-btn" title="Drag to move">
+                <span id="vt-icon">🛡️</span>
+            </button>
+            <div id="vt-panel">
+                <div class="vt-title">VT Keyword Scanner</div>
+                <button class="vt-btn" id="vt-scan-btn">🔍 Deep Scan</button>
+                <button class="vt-btn" id="vt-intel-btn" style="display: none;">📋 View Intel Report</button>
+            </div>
+        `;
+        document.body.appendChild(wrapper);
+
+        const btn = document.getElementById("vt-toggle-btn");
+        const scanBtn = document.getElementById("vt-scan-btn");
+        const intelBtn = document.getElementById("vt-intel-btn");
+
+        scanBtn.onclick = () => { startScan(); wrapper.classList.remove("menu-open"); };
+        intelBtn.onclick = () => { showIntel(); wrapper.classList.remove("menu-open"); };
+
+        let isDragging = false;
+        let isMoved = false;
+        let startX, startY, initialLeft, initialTop;
+
+        btn.addEventListener("mousedown", (e) => {
+            if (e.button !== 0) return;
+            isDragging = true;
+            isMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            wrapper.style.transform = "none";
+            initialLeft = wrapper.getBoundingClientRect().left;
+            initialTop = wrapper.getBoundingClientRect().top;
+
+            wrapper.style.left = `${initialLeft}px`;
+            wrapper.style.top = `${initialTop}px`;
+            wrapper.classList.add("dragging");
+        });
+
+        window.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isMoved = true;
+
+            wrapper.style.left = `${initialLeft + dx}px`;
+            wrapper.style.top = `${initialTop + dy}px`;
+        });
+
+        window.addEventListener("mouseup", () => {
+            if (!isDragging) return;
+            isDragging = false;
+            wrapper.classList.remove("dragging");
+
+            const rect = wrapper.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            let finalTop = Math.max(0, Math.min(rect.top, h - rect.height));
+            wrapper.style.top = `${finalTop}px`;
+
+            if (centerX < w / 2) {
+                wrapper.classList.remove("snap-right");
+                wrapper.classList.add("snap-left");
+                wrapper.style.left = "0px";
+            } else {
+                wrapper.classList.remove("snap-left");
+                wrapper.classList.add("snap-right");
+                wrapper.style.left = `${w - 60}px`;
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (wrapper.classList.contains("snap-right")) {
+                wrapper.style.left = `${window.innerWidth - 60}px`;
+            }
+            const rect = wrapper.getBoundingClientRect();
+            let finalTop = Math.max(0, Math.min(rect.top, window.innerHeight - rect.height));
+            wrapper.style.top = `${finalTop}px`;
+        });
+
+        btn.addEventListener("click", () => {
+            if (isMoved) return;
+            wrapper.classList.toggle("menu-open");
+        });
+
+        document.addEventListener("click", (e) => {
+            if (wrapper.classList.contains("menu-open") && !wrapper.contains(e.target)) {
+                wrapper.classList.remove("menu-open");
+            }
+        });
+
+        setTimeout(() => {
+            wrapper.style.transform = "none";
+            const rect = wrapper.getBoundingClientRect();
+            wrapper.style.top = `${rect.top}px`;
+            wrapper.style.left = `${window.innerWidth - 60}px`;
+        }, 100);
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initUI);
+    } else {
+        initUI();
+    }
 })();
