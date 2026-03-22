@@ -3,7 +3,6 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     Exit
 }
-
 $InstallDir = "C:\phwyverysad"
 $ZipPath = "$InstallDir\lock_mic_volume.zip"
 # แก้ไขลิงก์โดยใช้การ Encode ตัวอักษรไทยให้เป็นรหัส URL
