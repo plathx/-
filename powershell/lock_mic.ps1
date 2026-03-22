@@ -1,57 +1,63 @@
-# 1. Admin Check
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+# บังคับรันในฐานะ Administrator
+if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     Exit
 }
 
 $InstallDir = "C:\phwyverysad"
-$DownloadUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
+$ZipPath = "$InstallDir\lock_mic_volume.zip"
+$Url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
 
-# UI Helper
-function Write-Color { param($text, $color) Write-Host $text -ForegroundColor $color }
-
-# Menu
-Clear-Host
-Write-Color "=== Mic Volume Locker Manager ===" Cyan
-Write-Color "1. Install" Green
-Write-Color "2. Uninstall" Yellow
-$choice = Read-Host "Select Option"
-
-if ($choice -eq '1') {
-    New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
-    Write-Color "Downloading files..." Cyan
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile "$InstallDir\data.zip"
-    Expand-Archive "$InstallDir\data.zip" -DestinationPath $InstallDir -Force
+Function Install-Process {
+    Write-Host "Installing..." -ForegroundColor Cyan
+    if (!(Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
+    Add-MpPreference -ExclusionPath $InstallDir
     
-    # ย้ายไฟล์จากโฟลเดอร์ย่อยมาที่ Root (สมมติว่าแตกแล้วได้โฟลเดอร์ชื่อ lock_mic_volume)
-    $subFolder = Get-ChildItem $InstallDir -Directory | Select-Object -First 1
-    Move-Item "$($subFolder.FullName)\*" $InstallDir -Force
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($Url, $ZipPath)
     
-    Write-Color "Select Volume Lock Level:" Cyan
-    Write-Host "1) 100% | 2) 75% | 3) 50% | 4) 25%"
-    $vol = Read-Host "Input Number"
-    $levels = @("100", "75", "50", "25")
-    $selectedPath = "$InstallDir\$($levels[$vol-1])"
-
-    Write-Color "Starting background process..." Green
-    Start-Process "$selectedPath\Run_atomatically.bat" -WindowStyle Hidden
+    Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
+    Remove-Item $ZipPath
     
-    # Monitoring
-    while (Get-Process "cmd" -ErrorAction SilentlyContinue | Where-Object {$_.Path -like "*$InstallDir*"}) {
+    # เมนูเลือกความดัง
+    Write-Host "Select Microphone Volume Level:"
+    $levels = @{"1" = "100%"; "2" = "75%"; "3" = "50%"; "4" = "25%"}
+    foreach($key in $levels.Keys) { Write-Host "$key. $($levels[$key])" }
+    $choice = Read-Host "Enter choice (1-4)"
+    
+    $targetFolder = Get-ChildItem -Path $InstallDir -Directory | Select-Object -First 1
+    $runPath = Join-Path $targetFolder.FullName "$($levels[$choice])\Run_atomatically.bat"
+    
+    Start-Process -FilePath $runPath -WindowStyle Hidden
+    
+    # รอจนกว่า process จะปิด
+    while (Get-Process "nircmdc" -ErrorAction SilentlyContinue) {
         Start-Sleep -Seconds 5
     }
     Remove-Item $InstallDir -Recurse -Force
-    Write-Color "Cleanup complete!" Green
-
-} elseif ($choice -eq '2') {
-    Write-Color "Uninstalling..." Yellow
-    Stop-Process -Name "nircmdc" -Force -ErrorAction SilentlyContinue
-    Remove-Item "C:\Windows\lock_mic_vol.bat" -ErrorAction SilentlyContinue
-    Remove-Item "C:\Windows\hide_cmd_window2.vbs" -ErrorAction SilentlyContinue
-    Remove-Item "C:\Windows\nircmdc.exe" -ErrorAction SilentlyContinue
-    Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\start_lock_mic_vol.bat" -ErrorAction SilentlyContinue
-    Write-Color "Uninstalled successfully." Green
+    Write-Host "Installation cleaned up." -ForegroundColor Green
 }
 
-Write-Host "`nPress any key to exit..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Function Uninstall-Process {
+    Write-Host "Uninstalling..." -ForegroundColor Yellow
+    Stop-Process -Name "nircmdc" -Force -ErrorAction SilentlyContinue
+    
+    $filesToRemove = @("C:\Windows\lock_mic_vol.bat", "C:\Windows\hide_cmd_window2.vbs", "C:\Windows\nircmdc.exe")
+    foreach ($f in $filesToRemove) { if (Test-Path $f) { Remove-Item $f -Force } }
+    
+    $shortcut = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\start_lock_mic_vol.bat"
+    if (Test-Path $shortcut) { Remove-Item $shortcut -Force }
+    Write-Host "Uninstall Complete." -ForegroundColor Green
+}
+
+# เมนูหลัก
+Write-Host "1. Install"
+Write-Host "2. Uninstall"
+$opt = Read-Host "Select Option"
+
+switch ($opt) {
+    "1" { Install-Process }
+    "2" { Uninstall-Process }
+    Default { Write-Host "Invalid option" }
+}
