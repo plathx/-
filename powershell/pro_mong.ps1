@@ -3,7 +3,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Write-Host "กรุณาเปิด PowerShell ในฐานะ Administrator (คลิกขวา -> Run as Administrator)" -ForegroundColor Red
     Write-Host "กดปุ่มอะไรก็ได้ เพื่อปิด powershell หรือ เทอมินอล..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit
+    Stop-Process -Id $PID -Force # บังคับปิดทันที
 }
 
 # บังคับใช้ TLS 1.2 เพื่อให้การเชื่อมต่อเสถียรและเร็วกว่า
@@ -17,7 +17,8 @@ $mainChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
 
 if ($mainChoice -notin @('1','2')) {
     Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
-    exit
+    Start-Sleep -Seconds 2
+    Stop-Process -Id $PID -Force
 }
 
 # เมนูย่อย
@@ -28,10 +29,11 @@ $emuChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
 
 if ($emuChoice -notin @('1','2')) {
     Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
-    exit
+    Start-Sleep -Seconds 2
+    Stop-Process -Id $PID -Force
 }
 
-# กำหนดเส้นทาง
+# กำหนดเส้นทางตามที่เลือก
 if ($emuChoice -eq '1') {
     $targetFolder = "C:\Program Files\BlueStacks_nxt"
 } else {
@@ -62,7 +64,6 @@ if ($mainChoice -eq '1') {
         $isRunning = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue
 
         if ($isRunning) {
-            Write-Host "โปรแกรมทำงานอยู่" -ForegroundColor Yellow
             $null = Read-Host "กดปุ่ม เอ็นเทอร์เพื่อ รีสตาร์ส"
             Write-Host "กดปุ่ม ins เพื่อเปิด เมนูมอง" -ForegroundColor Green
         } else {
@@ -91,6 +92,7 @@ elseif ($mainChoice -eq '2') {
     }
 }
 
-# จบการทำงาน
+# จบการทำงาน และบังคับปิด Terminal
 Write-Host "`nกดปุ่มอะไรก็ได้ เพื่อปิด powershell หรือ เทอมินอล..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Stop-Process -Id $PID -Force # บังคับปิดหน้าต่าง PowerShell/Terminal ทิ้งทันที
