@@ -1,98 +1,101 @@
-# ตรวจสอบสิทธิ์ Administrator (จำเป็นสำหรับการเขียนไฟล์ลง C:\Program Files)
+# ==============================================================================
+# 1. Administrator Auto-Check (ตรวจสอบและขอสิทธิ์แอดมินอัตโนมัติ)
+# ==============================================================================
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "กรุณาเปิด PowerShell ในฐานะ Administrator (Run as Administrator)" -ForegroundColor Red
-    Write-Host "กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..."
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Start-Process PowerShell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
 
-# บังคับใช้ TLS 1.2
+# ==============================================================================
+# 2. Configuration (ตั้งค่าการทำงาน)
+# ==============================================================================
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ProgressPreference = 'SilentlyContinue'
 
-# เมนูหลัก
-Write-Host "กรุณาเลือกคำสั่ง:" -ForegroundColor Cyan
-Write-Host "1. Install"
-Write-Host "2. Remove"
-$mainChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
+$DL_URL   = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/opengl32.dll"
+$PATH_NXT = "C:\Program Files\BlueStacks_nxt"
+$PATH_MSI = "C:\Program Files\BlueStacks_msi5"
 
-if ($mainChoice -notin @('1','2')) {
-    Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
-    exit
-}
+# ==============================================================================
+# 3. Functions (ฟังก์ชันการทำงาน)
+# ==============================================================================
 
-# เมนูย่อย
-Write-Host "`nกรุณาเลือก Emulator:" -ForegroundColor Cyan
-Write-Host "1. BlueStacks App Player"
-Write-Host "2. MSI App Player x BlueStacks"
-$emuChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
-
-if ($emuChoice -notin @('1','2')) {
-    Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
-    exit
-}
-
-# กำหนดเส้นทางตามที่เลือก
-if ($emuChoice -eq '1') {
-    $targetFolder = "C:\Program Files\BlueStacks_nxt"
-} else {
-    $targetFolder = "C:\Program Files\BlueStacks_msi5"
-}
-
-$targetFile = "$targetFolder\opengl32.dll"
-$downloadUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/opengl32.dll"
-
-# ----------------- INSTALL -----------------
-if ($mainChoice -eq '1') {
-    Write-Host "`nกำลังดำเนินการติดตั้ง..." -ForegroundColor Yellow
-
-    # สร้างโฟลเดอร์หากไม่มีอยู่
-    if (!(Test-Path -Path $targetFolder)) {
-        New-Item -ItemType Directory -Force -Path $targetFolder | Out-Null
-    }
-
-    try {
-        # ปิด Progress Bar ชั่วคราว ลดการใช้ทรัพยากร UI
-        $ProgressPreference = 'SilentlyContinue'
-
-        # ใช้ .NET WebClient ดาวน์โหลดไฟล์แบบ Synchronous ตรงๆ
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile($downloadUrl, $targetFile)
-        
-        Write-Host "ดาวน์โหลดและติดตั้งไฟล์เสร็จสิ้น" -ForegroundColor Green
-
-        # ตรวจสอบว่าเปิด HD-Player.exe อยู่หรือไม่
-        $isRunning = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue
-
-        if ($isRunning) {
-            Write-Host "โปรแกรมกำลังเปิดอยู่" -ForegroundColor Yellow
-            $null = Read-Host "กดปุ่ม เอ็นเทอร์เพื่อ รีสตาร์ส"
-            Write-Host "กดปุ่ม ins เพื่อเปิด เมนูมอง" -ForegroundColor Cyan
-        } else {
-            Write-Host "กดปุ่ม ins เพื่อเปิด เมนูมอง" -ForegroundColor Cyan
-        }
-
-    } catch {
-        Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-# ----------------- REMOVE -----------------
-elseif ($mainChoice -eq '2') {
-    Write-Host "`nกำลังดำเนินการลบไฟล์..." -ForegroundColor Yellow
+# ฟังก์ชันรีสตาร์ทโปรแกรม
+function Restart-Emulator ($dir) {
+    $exe = Join-Path $dir "HD-Player.exe"
+    $proc = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }
     
-    if (Test-Path $targetFile) {
-        try {
-            Remove-Item -Path $targetFile -Force
-            Write-Host "ลบสำเร็จแล้ว" -ForegroundColor Green
-            $null = Read-Host "กดปุ่ม เอ็นเทอร์เพื่อ รีสตาร์ส"
-        } catch {
-            Write-Host "เกิดข้อผิดพลาดในการลบไฟล์ (โปรแกรมอาจจะเปิดใช้งานอยู่): $($_.Exception.Message)" -ForegroundColor Red
-        }
+    if ($proc) {
+        Write-Host "`n[!] ตรวจพบ HD-Player กำลังทำงานอยู่" -ForegroundColor Cyan
+        Read-Host "กดปุ่ม Enter เพื่อรีสตาร์ท (บังคับปิดและเปิดใหม่)"
+        Stop-Process -Id $proc.Id -Force
+        Start-Sleep -Seconds 1
+        if (Test-Path $exe) { Start-Process -FilePath $exe }
+        Write-Host "[+] กดปุ่ม INS เพื่อเปิด เมนูมอง" -ForegroundColor Green
     } else {
-        Write-Host "ไม่พบไฟล์เป้าหมาย (อาจถูกลบไปแล้ว)" -ForegroundColor Yellow
+        Write-Host "`n[+] กดปุ่ม INS เพื่อเปิด เมนูมอง" -ForegroundColor Green
     }
 }
 
-# คำสั่งปิดท้าย (รอกดปุ่มใดๆ เพื่อปิด)
-Write-Host "`nกดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+# ฟังก์ชันปิด PowerShell แบบเบ็ดเสร็จ
+function Finalize-Exit {
+    Write-Host "`nกดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Stop-Process -Id $PID -Force
+}
+
+# ==============================================================================
+# 4. Main Menu & Logic (เมนูหลักและการทำงาน)
+# ==============================================================================
+Clear-Host
+Write-Host "================================" -ForegroundColor Magenta
+Write-Host "      MOD INSTALLER CLEAN       "
+Write-Host "================================" -ForegroundColor Magenta
+Write-Host "1. Install (ติดตั้ง)"
+Write-Host "2. Remove (ลบ)"
+$cmd = Read-Host "`nเลือกคำสั่ง (1-2)"
+
+if ($cmd -match '1|2') {
+    Clear-Host
+    Write-Host "--- เลือก Emulator ---" -ForegroundColor Cyan
+    Write-Host "1. BlueStacks App Player"
+    Write-Host "2. MSI App Player x BlueStacks"
+    $emu = Read-Host "เลือกรายการ (1-2)"
+    
+    $targetDir  = if ($emu -eq '1') { $PATH_NXT } else { $PATH_MSI }
+    $targetFile = Join-Path $targetDir "opengl32.dll"
+    $exePath    = Join-Path $targetDir "HD-Player.exe"
+
+    # --- โหมดติดตั้ง ---
+    if ($cmd -eq '1') {
+        if (!(Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
+        Write-Host "`n[*] กำลังติดตั้ง Mod (TLS 1.2 WebClient)..." -ForegroundColor Yellow
+        try {
+            (New-Object System.Net.WebClient).DownloadFile($DL_URL, $targetFile)
+            Write-Host "[OK] ติดตั้งเสร็จสิ้น!" -ForegroundColor Green
+            Restart-Emulator $targetDir
+        } catch {
+            Write-Host "[ERR] ติดตั้งล้มเหลว: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    }
+    # --- โหมดลบ ---
+    else {
+        Write-Host "`n[*] กำลังลบ Mod..." -ForegroundColor Yellow
+        # บังคับปิดก่อนลบ
+        $proc = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exePath }
+        if ($proc) { Stop-Process -Id $proc.Id -Force; Start-Sleep -Seconds 1 }
+        
+        if (Test-Path $targetFile) {
+            Remove-Item $targetFile -Force
+            Write-Host "[OK] ลบสำเร็จแล้ว!" -ForegroundColor Green
+            Read-Host "กดปุ่ม Enter เพื่อรีสตาร์ท"
+            if (Test-Path $exePath) { Start-Process $exePath }
+        } else {
+            Write-Host "[!] ไม่พบไฟล์ในระบบ" -ForegroundColor Red
+        }
+    }
+}
+
+Finalize-Exit
