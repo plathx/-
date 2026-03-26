@@ -1,4 +1,3 @@
-# 1. Check for Administrator privileges
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[!] Elevating privileges..." -ForegroundColor Yellow
     try {
@@ -26,7 +25,6 @@ function Install-MicLock {
     $zipUrl = "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
     $zipFile = Join-Path $tempDir "lock_mic_volume.zip"
 
-    # Cleanup old temp if exists
     if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
@@ -46,7 +44,6 @@ function Install-MicLock {
         return
     }
     
-    # วนลูปถามจนกว่าผู้ใช้จะเลือกตัวเลือกที่ถูกต้อง
     $validChoice = $false
     while (-not $validChoice) {
         Write-Host "`nSelect Microphone Volume Lock Level:" -ForegroundColor Cyan
@@ -65,7 +62,6 @@ function Install-MicLock {
         }
     }
 
-    # ค้นหาโฟลเดอร์เป้าหมาย
     Write-Host "[*] Searching for configuration files..." -ForegroundColor Yellow
     $targetFolder = Get-ChildItem -Path $tempDir -Recurse -Directory | Where-Object { $_.Name -eq $folderName } | Select-Object -First 1
 
@@ -76,16 +72,12 @@ function Install-MicLock {
             Write-Host "[*] Executing configuration for $folderName..." -ForegroundColor Green
             Write-Host "[*] Waiting for Run_atomatically.bat to close..." -ForegroundColor DarkGray
             
-            # --- แก้ไขการรอ (Wait) ตรงนี้ ---
-            # ใช้ -PassThru เพื่อดึงสถานะหน้าต่างนั้นมาเช็ค และรอเฉพาะหน้าต่างนี้ปิด โดยไม่สนใจโปรแกรมเบื้องหลัง
             $batProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$targetBatch`"" -WorkingDirectory $targetFolder.FullName -PassThru
             
             while (-not $batProcess.HasExited) {
                 Start-Sleep -Milliseconds 500 # เช็คทุกๆ 0.5 วินาที
             }
-            # -----------------------------
             
-            # เมื่อหน้าต่าง .bat ปิดลง สคริปต์จะมาทำบรรทัดนี้ต่อทันที
             Write-Host "[*] Deleting C:\phwyverysad..." -ForegroundColor Yellow
             Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             
@@ -93,7 +85,7 @@ function Install-MicLock {
             
             Write-Host "`nPress any key to close..." -ForegroundColor Cyan
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-            exit # บังคับปิดสคริปต์ทันทีที่กดปุ่ม
+            exit
             
         } else {
             Write-Host "[!] Error: 'Run_atomatically.bat' not found inside $folderName folder." -ForegroundColor Red
@@ -126,7 +118,6 @@ function Uninstall-MicLock {
         }
     }
 
-    # กรณีลืมลบโฟลเดอร์ตอนถอนการติดตั้ง
     if (Test-Path "C:\phwyverysad") {
         Remove-Item "C:\phwyverysad" -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -142,7 +133,6 @@ function Uninstall-MicLock {
     exit
 }
 
-# Main Loop 
 Show-Menu
 $choice = Read-Host "Select an option"
 switch ($choice) {
